@@ -12,7 +12,7 @@ from ..indexing import digest
 from .evidence_tools import descriptor
 
 DOC = "otterdesk.litigation.evidence"
-GRAPH = "mirrorneuron.graph.analysis"
+GRAPH = "mirrorneuron-graph-analysis"
 PDF = DOC
 
 
