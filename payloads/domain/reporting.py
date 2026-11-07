@@ -96,6 +96,8 @@ def write_review(context, inputs):
     workspace = build_workspace(context, tuple(documents.values()), evidence, state, inventory, goal=payload["goal"])
     workspace = attach_graph(workspace, case, context.config.get("workspace", {}))
     workspace = publish_history(context, workspace, review_file=payload.get("review_file"))
+    from .run_summary import render as render_summary
+    (run_dir / "run_summary.md").write_text(render_summary(workspace), encoding="utf-8")
     from .review_products import issue_brief, transaction_appendix
     (case / "financial_review.json").write_text(json.dumps(workspace["financial_review"], ensure_ascii=False), encoding="utf-8")
     (run_dir / "transaction_appendix.md").write_text(transaction_appendix(workspace["financial_review"]), encoding="utf-8")
@@ -115,6 +117,7 @@ def write_review(context, inputs):
     index = {
         "status": report["status"],
         "report": "final_report.md",
+        "run_summary": "run_summary.md",
         "evidence_appendix": "evidence_appendix.md",
         "graph_appendix": "graph_appendix.md",
         "transaction_appendix": "transaction_appendix.md",
@@ -168,6 +171,7 @@ def write_review(context, inputs):
         artifact_reference("financial_review", "case/financial_review.json"),
         artifact_reference("consistency_review", "case/consistency_review.json"),
         artifact_reference("performance", "case/performance.json"),
+        artifact_reference("run_summary", "run_summary.md"),
     ] + workspace_refs + [artifact_reference("workspace_status", "workspace_status.json")]
     from .report_publication import publish_review_files
     publish_review_files(context)

@@ -1,5 +1,28 @@
 # Litigation Analyst specification
 
+## Analysis admission and completion summary (5.2.1)
+
+Complete authorized source passages take priority over optional filename
+inventory in the initial planning packet. Measure the packet using the decision
+transport's ASCII-escaped JSON representation. Preserve exact spans, hashes,
+structural dependencies, exclusions and content deduplication. After the initial
+spread, examine remaining distinct sources until the sample limit is reached or
+all candidates have been checked. No fitting passage on revision zero is an
+actionable failure, never successful zero-analysis completion. The separate model
+readiness call does not count as planning, assessment or independent review.
+
+Write `run_summary.md` before optional webpage rendering and publish it with the
+four detailed reports and `review_index.json`. Declare
+`conversation_result_text:run_summary.md` so desktop completion can display the
+bounded saved text without another model call or successful HTML preview.
+Include only permission-filtered, retained findings and their qualifications,
+coverage of dispatched assessment/review packets, limitations, next review, and
+descriptions of output files. Distinguish no-analysis outcomes explicitly.
+Publication and replay verify this artifact's bytes alongside the other reports.
+The desktop's common Output folder action must resolve an exact, locally verified
+run location; it must not infer successful host export from a configured path.
+Frozen runs remain unchanged.
+
 ## Human review handoff (5.2)
 
 Real-data desktop setup confirms an authorized folder and a neutral review goal
@@ -105,9 +128,10 @@ Budget this packet together with schema, guidance, prior findings and output res
 Empty optional historical memory must not imply an empty current source corpus.
 
 For revision zero the model schema permits only execute and requires a nonempty
-enquiry list. Actual absence of authorized readable sources and inability to admit
-complete source context produce explicit incomplete stop reasons without model
-inference. Existing cancellation/deadline controls retain priority. Completed-round
+enquiry list. Actual absence of authorized readable sources produces an explicit
+incomplete stop reason without model inference. Since 5.2.1, inability to admit
+complete source context fails before completion. Existing cancellation/deadline
+controls retain priority. Completed-round
 replanning can stop as before. Prior run requests and artifacts are never rewritten.
 
 Local models require at least one GPU with 49,152 MB of memory. When the selected default LLM is a registered remote provider, admission requires any GPU and 16 GB RAM; local-model VRAM constraints are removed through the existing SDK resource profile.

@@ -1,5 +1,25 @@
 # Litigation Analyst
 
+## Evidence planning and saved run summary (5.2.1)
+
+Initial planning reserves its bounded context for complete, authorized source
+passages before adding filenames. If the spread of examples contains only large
+documents, it checks the remaining distinct sources for admissible passages.
+If no complete passage fits, the run fails with an actionable context error
+instead of reporting completed analysis. Model readiness is a separate check;
+it is not case analysis.
+
+Every completed review publishes `run_summary.md` with the saved findings,
+assessment and review coverage, limitations, next review question, and descriptions
+of the output files. Chat displays this compact artifact independently of the
+optional HTML workspace and its preview size limit. The existing four detailed
+Markdown reports and `review_index.json` remain available. The desktop's shared
+run summary links **Output folder** to the exact locally available run directory;
+availability there does not certify an additional copy to Downloads.
+
+Refresh the idle prepared definition and start a new run to use this version.
+Existing runs and their model receipts are preserved.
+
 ## Human review and clearer handoffs (5.2)
 
 For your own matter, choose the authorized document folder, then answer **What
@@ -109,8 +129,9 @@ and keep structural dependencies whole. Duplicate content does not fill the samp
 This is navigation for choosing searches, not exhaustive evidence review.
 
 The initial model schema requires execution with at least one enquiry. When no
-authorized readable source or complete source context fits, the blueprint records
-an explicit incomplete result without asking the model to invent case terms.
+authorized readable source exists, the blueprint records an explicit incomplete
+result without asking the model to invent case terms. Since 5.2.1, failure to fit
+complete source context fails the run before it can report completion.
 Use a fresh run; prior failed runs retain their immutable requests and artifacts.
 
 ## Version 3.2: complete evidence and attorney issue briefs

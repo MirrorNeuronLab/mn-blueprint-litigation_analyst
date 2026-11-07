@@ -92,8 +92,14 @@ def chat_summary(workspace):
     total = len(coverage.get('source_ids', workspace['sources']))
     sample = 'Synthetic sample. ' if workspace.get('sample') else ''
     next_review = handoff['next_review']
-    return {'schema_version': 'otterdesk.report-summary.v1', 'status': 'Draft for legal review',
-        'overview': f"{sample}{len(ids)} draft finding{'' if len(ids) == 1 else 's'} available. {readable} of {total} authorized source records contain readable text; readable does not mean reviewed.",
+    reason = workspace['analysis'].get('stop_reason')
+    not_started = {
+        'planning_source_context_unavailable': 'Case analysis did not start because no complete source passage fit the planning context.',
+        'no_authorized_readable_sources': 'Case analysis did not start because no authorized readable sources were available.',
+    }.get(reason)
+    return {'schema_version': 'otterdesk.report-summary.v1',
+        'status': 'Analysis did not start' if not_started else compact(workspace['analysis']['status'], 80),
+        'overview': f"{sample}{not_started + ' ' if not_started else ''}{len(ids)} draft finding{'' if len(ids) == 1 else 's'} available. {readable} of {total} authorized source records contain readable text; readable does not mean reviewed.",
         'highlights': highlights,
         'limitation': compact(workspace['analysis']['status'] + '. Ranked retrieval is not exhaustive. Inspect supporting and contrary passages before relying on wording. No legal determination or sharing approval.', 400),
         'review': {'question': compact(next_review['question'], 320), 'reason': compact(next_review['reason'], 400),

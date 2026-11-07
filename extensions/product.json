@@ -1,6 +1,7 @@
 {
   "$schema": "https://mirrorneuron.io/schemas/blueprint/v1/extensions/product.schema.json",
   "category": "Business",
+  "capabilities": ["conversation_result_text:run_summary.md"],
   "product": {
     "agent_role": "Co-worker for legal evidence review and investigation.",
     "problem": "Legal teams need to connect findings across documents and emails while keeping every claim traceable.",

@@ -71,6 +71,16 @@
   "outputs": {
     "artifacts": [
       {
+        "artifact_id": "run_summary",
+        "path": "run_summary.md",
+        "mime_type": "text/markdown",
+        "type": "run_summary",
+        "producer": "workflow",
+        "schema_version": "mn.litigation.run_summary.v1",
+        "privacy": "confidential",
+        "required": true
+      },
+      {
         "artifact_id": "source_inventory",
         "path": "case/source_inventory.json",
         "mime_type": "application/json",

@@ -86,7 +86,10 @@ def plan_round(context, work):
         if overview is not None and not overview['authorized_readable_sources']:
             value = {"decision": "stop", "rationale": "no_authorized_readable_sources", "hypotheses": []}
         elif not revision and (overview is None or not overview['samples']):
-            value = {"decision": "stop", "rationale": "planning_source_context_unavailable", "hypotheses": []}
+            raise ValueError(
+                "Case analysis did not start: no complete authorized source passage fits the planning context. "
+                "Increase context_memory.policy.window_tokens or narrow the source scope, then start a new run."
+            )
         else:
             value = complete(root, frozen, f"plan-{revision:02d}", "plan", instruction, data, schema, llm_client)
         if value["decision"] == "execute" and not value["hypotheses"]:
@@ -107,8 +110,7 @@ def plan_round(context, work):
             signatures = {(h["question"], h["support_query"], h["counter_query"], tuple(h["graph_tools"])) for p in earlier for h in p["hypotheses"]}
             if all((h["question"], h["support_query"], h["counter_query"], tuple(h["graph_tools"])) in signatures for h in value["hypotheses"]):
                 value = {"decision": "stop", "rationale": "no_new_evidence_work_proposed", "hypotheses": []}
-        elif value["hypotheses"] or (not revision and value['rationale'] not in {
-                'no_authorized_readable_sources', 'planning_source_context_unavailable'}):
+        elif value["hypotheses"] or (not revision and value['rationale'] != 'no_authorized_readable_sources'):
             raise ValueError("Planner cannot skip initial evidence collection or execute work while stopping")
     save(root, f"case/rounds/proposal-{revision:02d}.json", {"proposal": value})
     if value["decision"] == "stop":
