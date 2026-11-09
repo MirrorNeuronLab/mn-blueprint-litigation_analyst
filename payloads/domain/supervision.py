@@ -1,5 +1,6 @@
 """Prioritize a source-bound human handoff without granting approval or starting work."""
 import html
+import re
 
 
 BOUNDARY = 'Discussing this question does not approve findings, start another run or authorize sharing. Record wording decisions in the finding review.'
@@ -8,6 +9,13 @@ BOUNDARY = 'Discussing this question does not approve findings, start another ru
 def compact(value, maximum):
     text = ' '.join(str(value or '').split())
     return text if len(text) <= maximum else text[:maximum - 1].rstrip() + '…'
+
+
+def display_question(value, workspace):
+    """Keep internal locators in the saved enquiry, with readable handoff copy."""
+    sources = {s['source_id']: s['relative_path'] for s in workspace['sources']}
+    return re.sub(r'\bjob:[a-f0-9]{64}\b',
+                  lambda match: sources.get(match.group(), 'unresolved source reference'), value)
 
 
 def build(workspace):
@@ -102,7 +110,7 @@ def chat_summary(workspace):
         'overview': f"{sample}{not_started + ' ' if not_started else ''}{len(ids)} draft finding{'' if len(ids) == 1 else 's'} available. {readable} of {total} authorized source records contain readable text; readable does not mean reviewed.",
         'highlights': highlights,
         'limitation': compact(workspace['analysis']['status'] + '. Ranked retrieval is not exhaustive. Inspect supporting and contrary passages before relying on wording. No legal determination or sharing approval.', 400),
-        'review': {'question': compact(next_review['question'], 320), 'reason': compact(next_review['reason'], 400),
+        'review': {'question': compact(display_question(next_review['question'], workspace), 320), 'reason': compact(next_review['reason'], 400),
                    'timing': compact(next_review['timing'], 160)}}
 
 

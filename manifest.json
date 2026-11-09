@@ -4,7 +4,7 @@
   "name": "Litigation Analyst",
   "tagline": "Find case facts and conflicting evidence for legal review",
   "payload_api": "mn.blueprint.v1",
-  "version": "5.2.1",
+  "version": "5.2.2",
   "description": "Make sense of a large collection of case documents. Find important facts, timelines, connections, and conflicting evidence, with links to the original sources. Get draft findings for legal review.",
   "workflow": "workflow.json",
   "execution": "execution.json",

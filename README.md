@@ -1,5 +1,13 @@
 # Litigation Analyst
 
+The default output destination is `~/Downloads/litigation-analyst`. New runs
+declare their reports and optional `web/index.html` package through the SDK's
+file-publication contract, so the runtime can deliver them and publish the actual
+result location. In OtterDesk, **Full report** opens beside **Output folder**.
+The report starts with review coverage, the stopping reason and useful next
+steps, including when no draft findings were retained. Existing frozen runs
+retain their original files and delivery state.
+
 ## Evidence planning and saved run summary (5.2.1)
 
 Initial planning reserves its bounded context for complete, authorized source
@@ -37,7 +45,7 @@ follow. Questions that need more evidence stay unresolved; another run or a
 record request is a separate decision.
 
 Chat presents a short saved summary, draft excerpts, support and contrary-passage
-counts, and the same next review question. **View full report** opens the evidence
+counts, and the same next review question. **Full report** opens the evidence
 workspace. **Discuss next step** fills a message draft for you to review and send.
 Use the finding review to record attributable wording decisions; save a copy or
 export review decisions to retain them. Discussion grants no approval or sharing
@@ -49,12 +57,13 @@ prepared co-worker definition for new runs; frozen and active runs retain their
 original behavior. Optional webpage failure still leaves the authoritative draft
 and evidence available.
 
-Version 5.0.2 registers the four reviewed Markdown reports and `review_index.json`
-with the existing SDK publication adapter so the runtime API can list and download
-their verified bytes. Case originals, model receipts and audit databases remain
-outside this download allowlist. SDK >=1.4.1.dev15 is required to register the
-authoritative run files while preserving the separate host export's relocated
-links. Completed runs retain their original files.
+Version 5.0.2 introduced verified runtime downloads. Version 5.2.2 declares the
+five Markdown reports, `review_index.json` and optional web package through the
+stock worker's publication contract. Raw case databases, model receipts and
+checkpoints remain outside this download allowlist. Delivered reports match the
+authoritative run files; `review_index.json.export_audit_root` locates the separate
+audit archive. The SDK >=1.4.1.dev15 requirement is unchanged. Completed runs
+retain their original files.
 
 ## Version 3.3.1: simpler matter review
 

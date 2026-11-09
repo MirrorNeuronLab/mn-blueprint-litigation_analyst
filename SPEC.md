@@ -1,5 +1,23 @@
 # Litigation Analyst specification
 
+## Output delivery and review overview (5.2.2)
+
+The publication step returns the SDK's `published_files` contract. The stock
+block worker delivers the verified reports and optional web package to its
+configured output directory and advertises their exports to Core. The default
+host destination remains `~/Downloads/litigation-analyst`; the runtime owns host
+copying, completion receipts and per-run folders. Internal case databases and
+checkpoints are not added to the public artifact allowlist. The existing full
+audit archive remains in the authorized owner's output package.
+
+The web overview explains the stop condition and separates readable, assessed,
+independently reviewed and unreadable source counts. Each count opens exactly
+its authorized records. Missing historical coverage is unknown, not zero. An
+empty finding list is not evidence of an absence of relevant events. Follow-up
+work shows its purpose and closure condition; internal source hashes stay in the
+original enquiry disclosure. No new analysis, approval or collection is implied.
+Existing frozen runs are not modified by these changes.
+
 ## Analysis admission and completion summary (5.2.1)
 
 Complete authorized source passages take priority over optional filename
@@ -53,13 +71,14 @@ asks only the actual pending question, avoids routine interruptions and does not
 repeat the handoff on every follow-up. No runtime, SDK or workflow change is
 required. Deterministic tests do not establish live-model legal accuracy.
 
-Version 5.0.2 publishes the existing four-report allowlist and `review_index.json`
-through the SDK's verified artifact-bundle adapter after domain verification and
-host export. Successful publication registers exact byte sizes and hashes for
-runtime downloads; case originals, model receipts and audit databases are not
-added. Replay verifies the existing bytes without repeating investigation. The
-explicit publication destination is the run store; the existing host export keeps
-its relocated links and audit root. This requires SDK >=1.4.1.dev15.
+Version 5.0.2 introduced verified runtime downloads for the four detailed reports
+and `review_index.json`. Version 5.2.2 returns the SDK's declared file publication
+instead of forcing publication to the run store. Required reports and the optional
+web package carry exact byte sizes and hashes; raw case databases, model receipts
+and checkpoints remain outside that allowlist. Replay verifies existing bytes
+without repeating investigation. Delivered reports match the authoritative run
+bytes, and `review_index.json.export_audit_root` identifies the separate audit
+archive. The existing SDK >=1.4.1.dev15 requirement remains.
 
 ## Version 3.3.1 navigation and disclosure
 

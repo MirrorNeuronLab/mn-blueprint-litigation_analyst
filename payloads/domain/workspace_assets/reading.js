@@ -25,6 +25,37 @@ function findingsView() {
     empty(visible.length?"No findings need review in this view.":"No findings match this view.")}
     ${completed.length?`<details ${!pending.length&&!flags.length?'open':""}><summary>Reviewed findings (${completed.length})</summary>${completed.map(f=>findingCard(f)).join("")}</details>`:""}`;
 }
+function reviewLabel(value) {
+  return String(value||"").replace(/\bjob:[a-f0-9]{64}\b/g, id =>
+    W.sources.find(source=>source.source_id===id)?.relative_path||"unresolved source reference");
+}
+function originalQuestion(value) {
+  return reviewLabel(value)===value?"":`<details><summary>Original investigation question</summary><p>${e(value)}</p><p>Source references are investigation locators, not proof that records are missing.</p></details>`;
+}
+function coverageSources(key) {
+  const ids=W.coverage?.[key];
+  return Array.isArray(ids)?W.sources.filter(source=>ids.includes(source.source_id)).map(source=>source.source_id):null;
+}
+function analysisOverview() {
+  const reasons={
+    maximum_rounds_reached:"The configured investigation rounds were used. Some sources and questions remain unexamined.",
+    planning_source_context_unavailable:"Analysis did not start: no complete source passage fit the planning context.",
+    no_authorized_readable_sources:"Analysis did not start: no authorized readable sources were available.",
+    investigation_deadline_reached:"The investigation reached its time limit. Some questions remain unexamined.",
+    tool_call_budget_exhausted:"The investigation reached its tool limit. Some questions remain unexamined.",
+    iteration_limit_exhausted:"The investigation reached its decision limit. Some questions remain unexamined.",
+    cancelled:"The investigation was stopped before the review was complete."
+  };
+  const measures=[["readable_ids","Readable sources"],["assessor_source_ids","Sent for assessment"],
+    ["reviewer_source_ids","Sent for independent review"],["unreadable_ids","Unreadable sources"]];
+  return `<section class="card" aria-label="Review coverage"><div class="section-title"><h3>${e(W.analysis.status)}</h3>${btn("Read detailed reports","view","Reports")}</div>
+    ${reasons[W.analysis.stop_reason]?`<p>${e(reasons[W.analysis.stop_reason])}</p>`:""}
+    <div class="coverage-grid">${measures.map(([key,label])=>{const ids=coverageSources(key);return `<div><span>${e(label)}</span>${ids?btn(`${ids.length} of ${W.sources.length}`,"coverage",key,`aria-label="${e(label)}: ${ids.length} of ${W.sources.length}"`):'<strong>Not recorded</strong>'}</div>`;}).join("")}</div>
+    <p class="muted">Counts open the exact source list. Readable text and model review do not establish complete review or attorney approval.</p></section>`;
+}
+function gapSteps(limit=3) {
+  return W.gaps.slice(0,limit).map(g=>`<div class="next-item"><div>${btn(reviewLabel(g.question),"gap",g.id)}<p>${e(g.why_it_matters||g.priority_basis)}</p><small>Done when: ${e(g.closure_condition||"Record a source-backed answer or a reviewed limitation.")}</small></div></div>`).join("");
+}
 function supervisorReview() {
   const handoff=W.supervision, review=handoff?.next_review;
   if(!review)return "";
@@ -33,9 +64,10 @@ function supervisorReview() {
     if(!finding||!needsReview(currentReview(finding)))return "";
   }
   const action=review.finding_id?btn("Review finding","finding",review.finding_id,'class="primary"'):
-    review.gap_id?btn("Review evidence gap","gap",review.gap_id,'class="primary"'):btn("Review findings","view","Findings",'class="primary"');
-  return `<section class="card" aria-label="Your next review"><span class="eyebrow">Your next review</span><h3>${e(review.question)}</h3>
-    <p>${e(review.reason)}</p><p class="qualification">${e(review.timing)}</p><div class="actions">${action}${evidenceButtons(review.evidence_ids)}</div>
+    review.gap_id?btn("Review evidence gap","gap",review.gap_id,'class="primary"'):btn("Review questions","view","Issues & evidence",'class="primary"');
+  return `<section class="card" aria-label="Your next review"><span class="eyebrow">Your next review</span><h3>${e(reviewLabel(review.question))}</h3>
+    <p>${e(review.reason)}</p><p class="muted">${e(review.timing)}</p><div class="actions">${action}${review.evidence_ids.length?evidenceButtons(review.evidence_ids):""}</div>
+    ${originalQuestion(review.question)}
     <details><summary>How to record your decision</summary><p>${e(handoff.boundary)}</p></details></section>`;
 }
 function readingOverview() {
@@ -44,14 +76,15 @@ function readingOverview() {
   const synthetic=W.sample||W.sources.some(s=>s.text?.includes("SYNTHETIC TEST MATTER"));
   const retained=visibleFindings();
   const handoff=supervisorReview();
-  return `<div class="page-intro"><div><h2>What the records support</h2><p>${e(W.matter_scope?.intended_decision||W.goal)}</p></div>${handoff?"":primaryAction()}</div>
+  return `<div class="page-intro"><div><h2>${retained.length||records.length?"What the records support":"Review progress and next steps"}</h2><p>${e(W.matter_scope?.intended_decision||W.goal)}</p></div>${handoff?"":primaryAction()}</div>
     ${synthetic?'<p class="sample-label">Synthetic test matter</p>':""}
+    ${analysisOverview()}
     ${handoff}
     <div class="reading-grid overview-main"><section class="card record-summary"><div class="section-title"><div><span class="eyebrow">Recorded facts</span><h3>${e(first?.transaction_ref||"Current findings")}</h3></div>${btn("View timeline","view","Chronology")}</div>
       ${records.length?`<div class="record-amounts">${records.filter(r=>["requested","approved","net_balance"].includes(r.event_type)).slice(0,6).map(r=>`<div><span>${e(({requested:"Requested",approved:"Stated approval",net_balance:"Recorded net"})[r.event_type])}</span><strong>${money(r.amount,r.currency)}</strong>${evidenceButtons(r.evidence_ids)}</div>`).join("")}</div>`:
-        retained.length?retained.slice(0,2).map(f=>`<h4>${e(f.title)}</h4><p>${e(currentReview(f).reviewed_text||f.assessment)}</p>${btn("View finding","finding",f.id)}`).join(""):empty("Review the available documents and flagged claims to establish what the records support.")}
+        retained.length?retained.slice(0,2).map(f=>`<h4>${e(f.title)}</h4><p>${e(currentReview(f).reviewed_text||f.assessment)}</p>${btn("View finding","finding",f.id)}`).join(""):`<p><strong>No draft findings were retained.</strong></p><p>This does not establish that no relevant events occurred. Inspect the saved sources and unresolved questions before drawing a conclusion.</p>${btn("Search evidence","view","Evidence Explorer")}`}
       ${first?`<p class="summary-result">Request less stated approval <strong>${money(first.request_minus_approval,first.currency)}</strong></p><p class="summary-result">Posting / reversal net <strong>${money(first.posting_reversal_net,first.currency)}</strong></p><p class="qualification">${e(first.qualification)}</p><details><summary>Record classifications and scope</summary><p>Event types and ledger grouping are counsel annotations. Exact quotations and recorded amounts are verified.</p>${financial.transactions.length>1?`<p>${financial.transactions.length} transaction groups are available. This summary shows ${e(first.transaction_ref)}.</p>${btn("View all transaction records","view","Chronology")}`:""}</details>`:""}</section>
-      <section class="card"><span class="eyebrow">Next useful work</span><h3>What remains unresolved</h3>${nextSteps(3)||W.gaps.slice(0,3).map(g=>`<p>${btn(g.question,"gap",g.id)}</p>`).join("")||empty("No structured next steps were supplied.")}${btn("View questions","view","Issues & evidence")}</section></div>
+      <section class="card"><span class="eyebrow">Next useful work</span><h3>What remains unresolved</h3>${nextSteps(3)||gapSteps()||empty("No structured next steps were supplied. Choose a specific question after inspecting the saved sources.")}${btn("View questions","view","Issues & evidence")}</section></div>
     ${handoff&&W.supervision.next_review.kind==="consistency"?"":readingFlags()}
     <div class="overview-counts" aria-label="Investigation counts">${btn(`${W.sources.length} documents`,"sources")}${btn(`${W.temporal.nodes.length} correspondents`,"view","People & relationships")}${btn(`${W.gaps.length} evidence gaps`,"view","Issues & evidence")}</div>
     <div class="reading-grid"><section class="card"><h3>People & events</h3><div class="person-chips">${W.temporal.nodes.slice(0,5).map(n=>btn(n.names.join(" / ")||n.label,"open-map",n.id)).join("")}</div>${btn("Open graph","open-map")}</section><section class="card"><h3>Review scope</h3><p>${e(W.analysis.scope)}.</p><details><summary>Coverage and provenance</summary><p>${W.coverage.readable_ids.length} readable documents. ${retained.length} narrative draft findings remain available after record checks.</p>${reviewAllowance()}<p>Snapshot ${e(W.snapshot_id)}</p>${W.reading_copy?`<p>${e(W.reading_copy.definition)}</p>`:""}</details></section></div>`;
@@ -134,7 +167,11 @@ function readingChronology() {
 document.addEventListener("click",event=>{
   const button=event.target.closest("[data-action]");if(!button)return;
   const {action,id}=button.dataset;
-  if(action==="select-report")goto({reportId:id});
+  if(action==="coverage") {
+    const ids=coverageSources(id);
+    if(ids)goto({view:"Evidence Explorer",sourceIds:ids,query:"",address:"",from:"",to:"",source:null});
+  }
+  else if(action==="select-report")goto({reportId:id});
   else if(action==="download-report"){const report=W.reading_reports?.find(r=>r.id===id);if(report)download(report.filename,report.markdown,"text/markdown");}
   else if(action==="report-heading"){const heading=document.getElementById(`report-heading-${id}`);heading?.scrollIntoView({block:"start",behavior:"smooth"});}
   else if(action==="graph-mode")goto({graphMode:id,graphPaths:false});
