@@ -1,10 +1,12 @@
 """Compact authoritative handoff, independent of optional webpage rendering."""
 
+from urllib.parse import quote
+
 from .review_products import escaped
-from .supervision import chat_summary
+from .supervision import build, chat_summary
 
 
-def render(workspace):
+def render(workspace, *, appendix_ids=()):
     summary = chat_summary(workspace)
     lines = ['# Litigation review summary', '', escaped(summary['overview']), '']
     for finding in summary['highlights']:
@@ -16,8 +18,13 @@ def render(workspace):
         'These counts do not establish complete review or attorney approval.', '',
         escaped(summary['limitation']), '',
         '## Your next review', '', escaped(summary['review']['question']), '',
-        escaped(summary['review']['reason']), '', escaped(summary['review']['timing']), '',
-        '## Output files', '',
+        escaped(summary['review']['reason']), '', escaped(summary['review']['timing']), '']
+    passages = [eid for eid in build(workspace)['next_review']['evidence_ids'] if eid in appendix_ids]
+    if passages:
+        links = [f"[Passage {i}](evidence_appendix.md#evidence-{quote(eid, safe='')})"
+                 for i, eid in enumerate(passages[:4], 1)]
+        lines += ['Passages for this review: ' + ' · '.join(links), '']
+    lines += ['## Output files', '',
         '- [Review draft](final_report.md): findings, contrary evidence and review coverage.',
         '- [Evidence appendix](evidence_appendix.md): exact source passages.',
         '- [Graph appendix](graph_appendix.md): observed relationships and their limits.',

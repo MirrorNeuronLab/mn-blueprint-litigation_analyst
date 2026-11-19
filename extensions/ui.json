@@ -6,12 +6,12 @@
   },
   "setup_guide": {
     "schema": "otterdesk.setup_guide.v1",
-    "introduction": "I'll organize documents into draft findings, timelines and counterevidence for legal review. Try the public synthetic EMC-2 sample from GitHub, or choose an authorized folder and tell me which question the review should answer. At handoff, I'll explain the evidence, limits and next decision for counsel.",
+    "introduction": "Try the public synthetic EMC-2 matter from GitHub to see a draft finding alongside its sources. For your own matter, choose an authorized folder and the question you want the review to answer.",
     "sample": {
       "available": true,
       "title": "EMC-2 investigation sample",
-      "description": "Download the pinned public EMC-2 repository from GitHub and analyze its synthetic documents.",
-      "expected_output": "After the sample investigation completes, a local interactive draft with cited findings, counterevidence, relationship paths and an audit for human review.",
+      "description": "Download and review the pinned public EMC-2 synthetic matter from GitHub. The sample includes a review question.",
+      "expected_output": "A draft with linked source passages, competing explanations and a question for counsel.",
       "values": {
         "inputs.payload.input_folder": "",
         "inputs.payload.goal": "Investigate financially relevant events and competing explanations in the synthetic EMC-2 materials. Cite the evidence and state limitations.",
@@ -19,7 +19,7 @@
       }
     },
     "real": {
-      "introduction": "Choose your authorized document folder, then name the question this review should help answer. Optional counsel intake and previous decisions are available in Configure. I'll return a partial draft with evidence, competing explanations and one next review question.",
+      "introduction": "Choose an authorized document folder and the question you want the draft to address.",
       "values": {
         "inputs.payload.input_folder": "",
         "inputs.payload.goal": "",
@@ -34,14 +34,18 @@
         "type": "local_path",
         "path_kind": "directory",
         "role": "input",
-        "requiredModes": ["real"]
+        "requiredModes": [
+          "real"
+        ]
       },
       {
         "path": "inputs.payload.goal",
         "label": "What question should this review help you answer?",
         "description": "Name the disputed event or decision to support. Include a date range or transaction reference if useful. I will test competing explanations; your question is review direction, not evidence.",
         "type": "textarea",
-        "requiredModes": ["real"]
+        "requiredModes": [
+          "real"
+        ]
       },
       {
         "path": "inputs.payload.matter_file",
@@ -94,7 +98,13 @@
         "description": "Managed in Memory. Changes Chat wording only; domain work and approvals keep their existing controls."
       }
     ],
-    "prompt_file": "@/payloads/prompts/setup.md"
+    "prompt_file": "@/payloads/prompts/setup.md",
+    "run_guidance": {
+      "on_start": "I’ll index the selected documents so the draft can link each finding to its sources and show conflicting evidence.",
+      "web_ui_ready": "Open the draft investigation and follow one finding to its supporting and contrary evidence.",
+      "report_ready": "Expand the run summary and read Your next review to see which question needs counsel’s attention.",
+      "output_ready": "Open final_report.md in the output folder and start with the next review question for counsel."
+    }
   },
   "starter_questions": [
     "Can I try the public synthetic EMC-2 case?",

@@ -51,9 +51,10 @@ def write_review(context, inputs):
     state = json.loads(context.store.path(terminal["checkpoint"]["path"]).read_text())
     if state["data"].get("derivations"):
         raise ValueError("Retired document-index derivations require their original staged implementation")
+    appendix_evidence = [e for e in evidence if e.source_id not in state["data"].get("source_review_flags", {})]
     (run_dir / "evidence_appendix.md").write_text(
         evidence_appendix(
-            [e for e in evidence if e.source_id not in state["data"].get("source_review_flags", {})],
+            appendix_evidence,
             state["data"].get("derivations", []),
         ),
         encoding="utf-8",
@@ -97,7 +98,8 @@ def write_review(context, inputs):
     workspace = attach_graph(workspace, case, context.config.get("workspace", {}))
     workspace = publish_history(context, workspace, review_file=payload.get("review_file"))
     from .run_summary import render as render_summary
-    (run_dir / "run_summary.md").write_text(render_summary(workspace), encoding="utf-8")
+    (run_dir / "run_summary.md").write_text(
+        render_summary(workspace, appendix_ids={e.evidence_id for e in appendix_evidence}), encoding="utf-8")
     from .review_products import issue_brief, transaction_appendix
     (case / "financial_review.json").write_text(json.dumps(workspace["financial_review"], ensure_ascii=False), encoding="utf-8")
     (run_dir / "transaction_appendix.md").write_text(transaction_appendix(workspace["financial_review"]), encoding="utf-8")

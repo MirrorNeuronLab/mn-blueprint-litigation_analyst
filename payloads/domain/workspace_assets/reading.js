@@ -65,8 +65,11 @@ function supervisorReview() {
   }
   const action=review.finding_id?btn("Review finding","finding",review.finding_id,'class="primary"'):
     review.gap_id?btn("Review evidence gap","gap",review.gap_id,'class="primary"'):btn("Review questions","view","Issues & evidence",'class="primary"');
+  const passages = review.evidence_ids.map(id => evidenceById.get(id)).filter(Boolean);
+  const sourceCount = new Set(passages.map(p => p.source_id)).size;
+  const basis = passages.length ? `<p class="muted">Review basis: ${passages.length} cited ${passages.length === 1 ? "passage" : "passages"} from ${sourceCount} source ${sourceCount === 1 ? "record" : "records"}.</p>` : "";
   return `<section class="card" aria-label="Your next review"><span class="eyebrow">Your next review</span><h3>${e(reviewLabel(review.question))}</h3>
-    <p>${e(review.reason)}</p><p class="muted">${e(review.timing)}</p><div class="actions">${action}${review.evidence_ids.length?evidenceButtons(review.evidence_ids):""}</div>
+    <p>${e(review.reason)}</p><p class="muted">${e(review.timing)}</p>${basis}<div class="actions">${action}${review.evidence_ids.length?evidenceButtons(review.evidence_ids):""}</div>
     ${originalQuestion(review.question)}
     <details><summary>How to record your decision</summary><p>${e(handoff.boundary)}</p></details></section>`;
 }
