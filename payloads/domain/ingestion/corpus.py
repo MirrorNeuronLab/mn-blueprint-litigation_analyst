@@ -98,6 +98,7 @@ class CaseCorpus:
         content = path.read_bytes()
         media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         text: str | None = None
+        page_spans = []
         if path.suffix.casefold() in _TEXT_SUFFIXES or media_type.startswith("text/"):
             try:
                 text = content.decode("utf-8")
@@ -107,7 +108,14 @@ class CaseCorpus:
             from mn_docs_to_markdown_skill import extract_pages_from_pdf
             try:
                 pages = extract_pages_from_pdf(path)
-                text = "\n".join(f"Page {p['page_number']}:\n\n{p['text']}" for p in pages) if any(p["text"].strip() for p in pages) else None
+                parts, offset = [], 0
+                for page in pages:
+                    heading = f"Page {page['page_number']}:\n\n"
+                    part = heading + page['text']
+                    page_spans.append((page['page_number'], offset + len(heading), offset + len(part)))
+                    parts.append(part)
+                    offset += len(part) + 1
+                text = "\n".join(parts) if any(p["text"].strip() for p in pages) else None
             except Exception:
                 # Parser failures are explicit coverage gaps. Missing dependency
                 # imports above still fail preparation instead of hiding setup errors.
@@ -127,6 +135,7 @@ class CaseCorpus:
             size_bytes=len(content),
             text=text,
             access_scope=self.access_scope,
+            page_spans=tuple(page_spans) if text else (),
         )
 
     def _scan_mbox(self, path: Path) -> Iterable[CaseDocument]:

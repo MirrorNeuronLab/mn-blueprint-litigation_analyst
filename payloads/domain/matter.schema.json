@@ -51,6 +51,22 @@
           "legal_framework": {
             "type": "string",
             "maxLength": 4000
+          },
+          "kind": {
+            "enum": [
+              "Claim",
+              "Defense",
+              "Issue"
+            ]
+          },
+          "elements": {
+            "type": "array",
+            "maxItems": 40,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
           }
         },
         "required": [
@@ -188,6 +204,50 @@
           "question",
           "owner"
         ]
+      }
+    },
+    "privilege_log": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "date": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "participants": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "document_type": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "basis": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "reviewer": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "approved": {
+            "type": "boolean"
+          }
+        }
       }
     }
   },

@@ -4,9 +4,74 @@ The default output destination is `~/Downloads/litigation-analyst`. New runs
 declare their reports and optional `web/index.html` package through the SDK's
 file-publication contract, so the runtime can deliver them and publish the actual
 result location. In OtterDesk, **Full report** opens beside **Output folder**.
-The report starts with review coverage, the stopping reason and useful next
-steps, including when no draft findings were retained. Existing frozen runs
-retain their original files and delivery state.
+The report opens with the review handoff and case graph. Review coverage, the
+stopping reason and next steps are available even when no draft findings were
+retained. Existing frozen runs retain their original files and delivery state.
+
+## Counsel review in the full report (5.4)
+
+Start at **Questions → Proof chart**. Define the elements of a claim or defense.
+In **Evidence**, open a source, highlight its exact words and choose **Capture
+fact**. Enter the proposition, reviewer and evidence role. A sent email can
+support dispatch while receipt remains open. Exact copies count as one
+supporting source version. Each fact can be reopened in the evidence viewer.
+
+Choose **Ask the case graph** on Overview. Ask “Which records address receipt?”
+and then “Which of those predate termination?” Inspect the interpreted cutoff,
+its source, the matching passages and the coverage. **Show matching records on graph** opens their recorded connections. **Save question** keeps both
+turns for the next production. The full report searches an offline index
+generated from the authorized DuckDB graph. Completed-run Chat uses the
+published graph appendix through Membrane.
+
+Under **People & events**, compare an attributed witness statement with an
+exhibit, edit the deposition question, or confirm and reverse a cited alias.
+**Timeline** distinguishes testimony dates from the dates described. In
+**Questions → Discovery**, assign the missing record and its closure test. In
+**Review history → Changes**, inspect related proof elements, outline questions
+and statement paragraphs after a new production.
+
+**Reports → Reviewed briefing** exports an editable Word statement with
+numbering, citations and an exhibit index, plus a separate counsel review sheet.
+The confidential archive contains a separate `case/privilege_log.html`
+worksheet. Counsel can complete missing metadata and preview the exact CSV
+columns before export.
+
+**Save copy** retains the current owner's review in a standalone HTML file.
+For a new run of the same matter, choose **Actions → Export review decisions**
+and set **Previous review decisions** in Configure. The next publication checks
+the citations against the authorized source versions. Open the
+[notice-review pilot](examples/notice_review/README.md) to exercise the handoff.
+
+## Case graph and graph questions (5.3)
+
+Open **Full report** to see the case graph on Overview. **Explore graph** opens
+the full view. Search for a name, finding, document, or transaction reference.
+Select a node to focus on its neighbors, or select a connection to see the
+source passages behind it. Solid green lines mark supporting draft citations.
+Dashed amber lines mark contrary draft citations. The connections table offers
+the same evidence controls. Use the zoom controls or drag the full graph to pan.
+
+Each new run saves `case/case_graph.duckdb` in its audit archive. The graph
+stores typed objects, directed relationships, and exact citation locators.
+The graph appendix contains a bounded query result that Membrane can retrieve
+for answers in OtterDesk Chat. For example, ask **“Search the graph appendix.
+Which records reference TX-104?”** The answer depends on the published graph
+excerpt and the sources Membrane retrieves for that turn. Direct queries over
+the saved database use the blueprint's read-only question tool.
+
+```bash
+python litigation_analyst/ask_case.py /absolute/path/to/completed/run \
+  "Which records reference TX-104?"
+```
+
+Use the blueprint's Python 3.12 environment with DuckDB and the Graph Analysis
+skill. Omit the question to ask several questions in one session. Other patterns
+include “Who sent Transfer request?”, “What evidence contradicts the draft
+finding about approval?”, and “How is Maya Chen connected to TX-104?”. Use the
+actual record titles, names, or references from the report. Ambiguous names return
+candidate objects. Queries return recorded relationships and source locations
+within the saved scope. For a new graph, refresh the idle co-worker definition
+and run the updated blueprint.
 
 ## Evidence planning and saved run summary (5.2.1)
 

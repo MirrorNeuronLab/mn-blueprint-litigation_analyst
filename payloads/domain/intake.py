@@ -13,6 +13,17 @@ from .ingestion.corpus import CaseCorpus
 from .sample_data import prepare_emc2, EMC2_DOCUMENTATION, attribution
 
 
+def case_corpus(source, access_scope, payload, *, sample):
+    """Keep configured counsel intake and portable review packets outside the evidence corpus."""
+    excluded_paths = set(EMC2_DOCUMENTATION if sample else ())
+    for field in ('matter_file', 'review_file'):
+        if payload.get(field):
+            control = Path(payload[field]).expanduser().resolve()
+            if control.is_relative_to(source):
+                excluded_paths.add(control.relative_to(source).as_posix())
+    return CaseCorpus(source, access_scope, excluded_paths=excluded_paths)
+
+
 @activity_operation('Examining case documents', completed='Examining case documents: completed')
 def prepare_sources(context, inputs):
     from .state import capture, capture_result, json_reference, read_capture
@@ -48,8 +59,7 @@ def prepare_sources(context, inputs):
             "run output must be outside input_folder to avoid indexing generated evidence"
         )
     policy = context.config["investigation"]
-    corpus = CaseCorpus(source, access_scope=policy["access_scope"],
-                        excluded_paths=EMC2_DOCUMENTATION if folder is None else ())
+    corpus = case_corpus(source, policy["access_scope"], payload, sample=folder is None)
     paths = list(corpus._source_paths())
     if not paths or len(paths) > policy["max_files"]:
         raise ValueError("input folder is empty or exceeds max_files")

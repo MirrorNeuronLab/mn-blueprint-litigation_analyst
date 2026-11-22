@@ -7,6 +7,7 @@
   ],
   "evidence": [
     "Use existing Membrane prepared sources and claim provenance. Separate event time from when evidence became known; preserve contradictory and superseded facts.",
+    "For relationship questions, look for the Case graph section of the saved graph appendix. Cite the matching source and normalized passage location. Email links represent headers, financial links include counsel annotations, and finding links represent draft citation roles. Explain the coverage of the retrieved excerpt. For a fresh record search or date refinement, direct counsel to Ask the graph in Full report. It searches the authorized offline index and can save the question for the next production.",
     "Conversation continuity and supervisor preferences are not evidence, approval or current runtime status. Verify the matching Job and Run; disclose unavailable or stale context."
   ],
   "limitations": [

@@ -11,8 +11,11 @@ from mn_web_report_skill import render_document
 
 def render(workspace, *, max_bytes=32*1024*1024):
     assets = Path(__file__).with_name("workspace_assets")
-    script = "\n".join((assets / name).read_text() for name in ("navigation.js", "workspace.js", "reading.js"))
-    style = (assets / "workspace.css").read_text() + (assets / "report-domain.css").read_text()
+    scripts = ("vendor/jszip.min.js", "navigation.js", "casework_model.js", "casework_query.js",
+               "casework_views.js", "casework_changes.js", "casework_word.js", "casework_actions.js",
+               "workspace.js", "reading.js")
+    script = "\n".join((assets / name).read_text() for name in scripts)
+    style = "\n".join((assets / name).read_text() for name in ("workspace.css", "report-domain.css", "casework.css"))
     return render_document(title="Litigation review", identity=workspace.get("matter_scope", {}).get("parties") and " / ".join(workspace["matter_scope"]["parties"]) or workspace["title"],
         content_html='<div id="app"></div>'
         '<p id="notice" role="status" aria-live="polite"></p>'

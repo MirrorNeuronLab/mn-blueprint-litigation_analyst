@@ -59,9 +59,6 @@ def write_review(context, inputs):
         ),
         encoding="utf-8",
     )
-    (run_dir / "graph_appendix.md").write_text(
-        "\n".join(graph_exhibits(state["records"])), encoding="utf-8"
-    )
     from .matter_intake import load as load_matter
     from .financial_review import build as reconcile
     from .review_packets import consistency_checks
@@ -97,6 +94,19 @@ def write_review(context, inputs):
     workspace = build_workspace(context, tuple(documents.values()), evidence, state, inventory, goal=payload["goal"])
     workspace = attach_graph(workspace, case, context.config.get("workspace", {}))
     workspace = publish_history(context, workspace, review_file=payload.get("review_file"))
+    from .case_ontology import appendix as ontology_appendix, publish as publish_ontology
+    ontology = publish_ontology(run_dir, workspace)
+    ontology.update(file_record(context, ontology['path']))
+    from .case_ontology import connect
+    from .casework_index import offline_index
+    with connect(run_dir / ontology['path'], read_only=True) as database:
+        workspace['case_query_index'] = offline_index(database, workspace)
+    from .privilege_log import publish as publish_log
+    privilege_path = publish_log(run_dir, load_matter(run_dir).get('privilege_log', []))
+    (run_dir / "graph_appendix.md").write_text(
+        ontology_appendix(run_dir, ontology) + "\n\n" + "\n".join(graph_exhibits(state["records"])),
+        encoding="utf-8",
+    )
     from .run_summary import render as render_summary
     (run_dir / "run_summary.md").write_text(
         render_summary(workspace, appendix_ids={e.evidence_id for e in appendix_evidence}), encoding="utf-8")
@@ -113,7 +123,7 @@ def write_review(context, inputs):
     # narrative. Context-service failure is an explicit navigation limitation.
     (case / "workspace.json").write_text(json.dumps(workspace, ensure_ascii=False), encoding="utf-8")
     try:
-        workspace["memory"] = publish_memory(context, workspace)
+        workspace["memory"] = publish_memory(context, workspace, ontology=ontology)
     except (OSError, ValueError, RuntimeError) as error:
         workspace["memory"] = {"status": "Unavailable", "reason": type(error).__name__,
             "qualification": "Historical workspace navigation was not published; exact frozen evidence remains available"}
@@ -124,6 +134,8 @@ def write_review(context, inputs):
         "run_summary": "run_summary.md",
         "evidence_appendix": "evidence_appendix.md",
         "graph_appendix": "graph_appendix.md",
+        "case_ontology": ontology,
+        "privilege_log": privilege_path,
         "transaction_appendix": "transaction_appendix.md",
         "financial_review": "case/financial_review.json",
         "matter_intake": "case/matter.json",
@@ -162,6 +174,8 @@ def write_review(context, inputs):
         artifact_reference("review_index", "review_index.json"),
         artifact_reference("evidence_appendix", "evidence_appendix.md"),
         artifact_reference("graph_appendix", "graph_appendix.md"),
+        artifact_reference("case_ontology", ontology['path']),
+        artifact_reference("privilege_log", privilege_path),
         artifact_reference("transaction_appendix", "transaction_appendix.md"),
         artifact_reference("financial_review", "case/financial_review.json"),
         artifact_reference("consistency_review", "case/consistency_review.json"),

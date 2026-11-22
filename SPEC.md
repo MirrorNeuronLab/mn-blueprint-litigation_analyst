@@ -1,5 +1,96 @@
 # Litigation Analyst specification
 
+## Counsel review and supplemental productions (5.4)
+
+The matter intake can supply a claim, defense or issue with zero or more
+counsel-defined elements. The proof chart accepts additional elements and
+counsel-authored facts. Every saved fact binds the normalized source ID,
+SHA-256, half-open Unicode character range and verbatim quotation. PDF physical
+pages use the extractor's page boundaries. A named reviewer must verify a Bates
+or transcript pinpoint against the original. Draft findings retain their
+existing distinct provenance.
+
+Publication extends the DuckDB graph with proof elements, facts, their
+supporting, contrary and contextual links, and confirmed identity links.
+`review_units` and `review_dates` index authorized text, including sources
+without a selected finding. `graph_citations` joins relationships to exact
+passages. Bounded search in the standalone HTML reads a projection selected by
+DuckDB from that same snapshot. Round-robin selection across sources retains
+up to 24,000 passages and 16,000 cited relationships. Search displays its
+coverage, limits the visible results to 60, groups duplicates by source hash
+and offsets, and includes the open page's cited reviews. Named date cutoffs
+require a single known day. Date refinements compare record dates, disclose
+unknown or overlapping intervals, and link to the evidence for a named cutoff.
+The report stores up to eight turns in each saved question. The direct CLI
+queries the verified database. Completed-run Chat retrieves published passages
+and the bounded graph appendix through Membrane.
+
+Witness preparation joins a witness's cited statement, an exhibit and a proof
+element. Counsel can edit the neutral question and record a disposition.
+Identity confirmation requires a current quote containing both identifiers.
+Reversal preserves the prior decision and the identities observed in the
+source. Chronology combines email headers, annotated transactions, source date
+mentions and counsel-authored event intervals. Source wording is retained.
+For qualified months, early covers days 1–10, mid covers 11–20, and late covers
+21 through month end. A missing year stays unresolved.
+
+Assigned discovery stores the sought record, owner, internal target and closure
+test. Closure records the reviewer, resolution and a current supporting fact
+for the same element. Changed evidence reopens the review. New source hashes
+and changed anchors identify candidate dependencies in proof charts, witness
+questions and draft paragraphs. Reviewed wording needs another check before
+inclusion in a statement when a related new passage is flagged. A preserved
+historical quote is labeled with its source version. Identical copies add no
+new source basis.
+
+The owner can save a standalone HTML copy or export a versioned review packet
+through the existing `review_file` input. The next run validates the packet's
+matter, access scope, source versions, ranges and links before publication.
+A narrowed source set withholds the previous casework. The owner's proof work,
+saved questions, notes and full index are excluded from excerpt briefings.
+
+Browser downloads create editable Word documents with OOXML numbering,
+internal exhibit bookmarks and quoted source passages. The counsel sheet
+includes adverse, pending and superseded material. The private privilege
+worksheet uses only counsel-supplied descriptive fields. CSV preparation
+requires a reference, description, basis, reviewer and affirmative approval.
+Only the chosen fields of eligible rows enter the preview and export. The
+worksheet is distributed inside the owner's confidential audit archive.
+Configured intake and review files are excluded from the source inventory when
+placed inside the selected evidence folder.
+
+## Published case ontology (5.3)
+
+Publish `case/case_graph.duckdb` after the final workspace passes source and
+consistency checks. The immutable run snapshot has typed node and edge tables
+and a many-to-many edge citation table. Each citation binds a source ID,
+normalized SHA-256, and an exact character range. `review_index.json` identifies
+the graph version, scope through the workspace snapshot, counts, bytes, and
+SHA-256. Stage and replace the database atomically. Replay verifies the database
+with the other authoritative files. The database stays in the confidential run
+archive and outside the report download allowlist.
+
+The ontology represents authorized documents, email records and address
+identities, counsel-annotated financial records, transaction references, draft
+findings, and counsel questions linked to those findings. Directed edges record
+header addressing, shared source, transaction reference, issue coverage, and
+supporting or contrary citation roles. An explicitly contrary citation stays
+contrary if the draft also includes it in its general citation list. Handling
+restrictions and consistency decisions apply before projection. The database
+includes the authorized inventory and recorded relationships. The report
+projects up to 60 email records, 20 addresses per header field, and 60 financial
+records. Its network includes a neighbor view, connection-level evidence, and a table.
+Draft assessment, counsel annotation, and recorded source structure remain distinct.
+
+The blueprint's `ask_case.py` maps supported everyday questions to fixed,
+parameterized, read-only DuckDB queries. Bounded path lookup uses Graph Analysis
+skill traversal over DuckDB adjacency. Unresolved names, ambiguous matches,
+and search limits are explicit. The existing Membrane workspace memory records
+the graph snapshot and finding-to-passage navigation. The published graph
+appendix adds up to 16 queried relationships per relation type to the prepared
+conversation corpus. Native Chat uses retrieved evidence from this corpus.
+Direct queries against the database after batch completion use `ask_case.py`.
+
 ## Output delivery and review overview (5.2.2)
 
 The publication step returns the SDK's `published_files` contract. The stock

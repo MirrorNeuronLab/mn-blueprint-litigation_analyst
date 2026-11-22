@@ -1,6 +1,6 @@
 # Litigation Analyst implementation report
 
-Date: October 8, 2026. Blueprint version: **2.7.0**.
+Historical implementation report for **2.7.0**, October 8, 2026. The [current specification](SPEC.md) describes the 5.4 counsel review workflows and case graph.
 
 Reference: `OtterDesk_Litigation_Analyst_Interactive_Output_Spec.md` supplied by the
 user. Its fictional case and example numbers are design examples, not evidence

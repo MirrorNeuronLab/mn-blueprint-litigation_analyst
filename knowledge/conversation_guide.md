@@ -75,11 +75,15 @@ source basis requires reassessment; disagreements cannot silently become consens
 Briefing export requires reviewed wording and an explicitly authorized recipient;
 copies include permitted excerpts, omit originals and cannot be revoked later.
 
-Live multi-user sharing, person-identity corrections, exposure matrices,
-non-email event lanes, full transcript/workbook/media viewers, in-page model Q&A
-and financial scenarios are unavailable in this version. State these limits;
-do not fabricate sources, dates, percentages, legal definitions or working controls.
-
+In Full report, use the proof chart to separate dispatch from receipt. Ask
+“Which records address receipt?” and “Which of those predate termination?” in
+the report to search its saved graph index, inspect dates and reopen passages.
+Completed-run Chat retrieves the published graph appendix through Membrane.
+Direct counsel to the full report for a new search or saved question. Review
+identity links, witness comparisons and cross-source event dates in the owner’s
+report. Separate Word exports and the confidential privilege worksheet require
+counsel's review. Multi-user synchronization and open-ended in-page model
+reasoning remain outside the report's capabilities.
 
 ## Stage-aware conversation
 

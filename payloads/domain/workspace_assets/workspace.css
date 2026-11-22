@@ -280,16 +280,6 @@ main {
   font-size:11px;
   margin-top:4px
 }
-.person-chips {
-  display:flex;
-  flex-wrap:wrap;
-  gap:7px;
-  margin:18px 0
-}
-.person-chips button {
-  font-size:12px;
-  background:#f1f5f5
-}
 .report-tabs {
   display:flex;
   flex-wrap:wrap;
@@ -400,107 +390,6 @@ main {
   margin:2px;
   vertical-align:baseline
 }
-.map-scroll {
-  overflow:auto;
-  border:1px solid var(--line);
-  border-radius:8px;
-  background:#fff;
-  padding:15px
-}
-.case-map {
-  display:block;
-  width:100%;
-  min-width:760px;
-  height:auto
-}
-.case-map .column-label {
-  fill:#6a7c81;
-  font-size:12px;
-  font-family:system-ui,sans-serif
-}
-.map-edge {
-  fill:none;
-  stroke:#9ab3ae;
-  stroke-width:1.5
-}
-.map-node {
-  cursor:pointer;
-  outline-offset:4px
-}
-.map-node rect {
-  stroke:#b7cbc5;
-  fill:#eff6f2;
-  stroke-width:1
-}
-.map-node.communication rect {
-  stroke:#b9ccdc;
-  fill:#f0f5fa
-}
-.map-node.financial_record rect {
-  stroke:#e0ccb1;
-  fill:#faf4ea
-}
-.map-node.transaction rect {
-  stroke:#bfc4d9;
-  fill:#f2f1f9
-}
-.map-node text {
-  font-family:system-ui,sans-serif;
-  font-size:12px;
-  fill:#233b40;
-  pointer-events:none
-}
-.map-node .node-detail {
-  font-size:10px;
-  fill:#687e82
-}
-.map-node.active rect,.map-node:hover rect,.map-node:focus rect {
-  stroke:#196f61;
-  stroke-width:2
-}
-.graph-caption {
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
-  font-size:12px;
-  color:var(--muted);
-  margin:10px 0 18px
-}
-.legend-dot {
-  width:9px;
-  height:9px;
-  border-radius:50%;
-  display:inline-block;
-  background:#5c947c;
-  margin-left:8px
-}
-.legend-dot.communication {
-  background:#7298ba
-}
-.legend-dot.financial_record {
-  background:#c29c61
-}
-.legend-dot.transaction {
-  background:#8b82ad
-}
-.map-hint {
-  border:1px dashed #cad8d3;
-  border-radius:6px;
-  padding:14px;
-  font-size:13px;
-  color:var(--muted)
-}
-.node-inspector {
-  margin-top:20px
-}
-.node-inspector .eyebrow {
-  display:block;
-  margin-bottom:6px
-}
-.node-inspector .actions {
-  margin-top:15px
-}
 .reading-timeline {
   max-width:850px;
   margin-left:5px
@@ -598,9 +487,6 @@ main {
   .scope {
     padding:8px 20px
   }
-  .map-scroll {
-    padding:8px
-  }
   .header-row .actions {
     gap:7px
   }
@@ -660,12 +546,6 @@ main {
   }
   .report-paper h3 {
     break-after:avoid
-  }
-  .map-scroll {
-    overflow:visible
-  }
-  .case-map {
-    min-width:0
   }
 }
 /* Eight task-focused destinations and contextual review controls. */
@@ -860,59 +740,6 @@ header .export-options button:hover {
   margin: 3px 0;
   overflow-wrap: anywhere;
 }
-.graph-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
-  gap: 18px;
-  align-items: start;
-}
-.graph-workspace > * {
-  min-width: 0;
-}
-.graph-workspace .case-map {
-  min-width: 800px;
-}
-.graph-workspace .node-inspector {
-  margin: 0;
-  padding: 18px;
-  overflow-wrap: anywhere;
-}
-.node-inspector h3 {
-  font-size: 16px;
-}
-.node-inspector h4 {
-  margin: 20px 0 8px;
-  font-size: 12px;
-}
-.node-inspector p {
-  font-size: 12px;
-}
-.node-inspector button {
-  font-size: 11px;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-.map-node.muted-node {
-  opacity: .6;
-}
-.map-edge.muted-edge {
-  opacity: .35;
-}
-.graph-workspace .map-node text {
-  font-size: 15px;
-}
-.graph-workspace .map-node .node-detail {
-  font-size: 12px;
-}
-.map-edge.highlighted {
-  stroke: #176c65;
-  stroke-width: 2.5;
-}
-@media (max-width: 1100px) {
-  .graph-workspace {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 @media (max-width: 800px) {
   nav .primary-navigation {
     display: flex;
@@ -958,9 +785,6 @@ header .export-options button:hover {
 @media print {
   .export-menu, .route-tabs, .unsaved-reminder, .document-search, .briefing-readiness {
     display: none;
-  }
-  .graph-workspace {
-    display: block;
   }
 }
 .source-link {

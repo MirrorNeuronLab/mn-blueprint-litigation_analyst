@@ -1,0 +1,8 @@
+{
+  "version": "mn.litigation.matter.v1",
+  "title": "Synthetic notice review",
+  "intended_decision": "Determine what the record shows about receipt of notice for shipment A before termination.",
+  "parties": ["Example customer", "Example supplier"],
+  "issues": [{"id": "notice", "kind": "Defense", "question": "Notice before termination", "elements": ["Notice was sent for shipment A", "Customer received notice for shipment A"]}],
+  "privilege_log": [{"reference":"PRIV-001", "date":"2024-04-02", "document_type":"Memo", "description":"Counsel communication", "basis":"Counsel review pending", "reviewer":"", "approved":false}]
+}

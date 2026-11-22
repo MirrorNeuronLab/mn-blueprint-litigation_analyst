@@ -11,7 +11,7 @@ from .claim_memory import _notes
 from .round_state import save
 
 
-def publish(context, workspace):
+def publish(context, workspace, *, ontology=None):
     scope = {"job_id": context.job_id or os.environ.get("MN_JOB_ID"),
         "run_id": context.run_id or os.environ.get("MN_WORKFLOW_RUN_ID") or os.environ.get("MN_RUN_ID")}
     memory = runtime_text_memory(context.config, principal="round-specialists", scope=scope)
@@ -20,11 +20,15 @@ def publish(context, workspace):
     try:
         receipts = []
         catalog = json.loads((Path(context.store.run_dir) / "case/source-query.json").read_text())
-        for finding in workspace["findings"]:
+        finding_records = []
+        findings = workspace["findings"]
+        for finding in findings:
             identifier = "case-finding-" + fingerprint([scope, workspace["matter_id"], finding["id"], finding["material_digest"]])
+            finding_records.append(identifier)
+            counter = set(finding["counter_evidence"])
             relations = tuple((identifier, relation, "case-evidence-" + fingerprint([scope, workspace["matter_id"], evidence_id]))
                 for relation, ids in (("SUPPORTED_BY", finding["supporting_evidence"]), ("OPPOSED_BY", finding["counter_evidence"]))
-                for evidence_id in ids)
+                for evidence_id in ids if relation == "OPPOSED_BY" or evidence_id not in counter)
             record = RuntimeRecord(identifier, finding["title"], workspace["captured_at"],
                 "inferred_assessment_not_legal_evidence", {"memory_family": "litigation_workspace",
                     "case_snapshot": workspace["snapshot_id"], "finding_id": finding["id"],
@@ -36,7 +40,7 @@ def publish(context, workspace):
                 relations=relations, kind="hypothesis")
             receipts.append(memory.record(record, event_id=["case-workspace-finding", identifier],
                 upstream=[{"source_ref": "case/workspace.json"}], allow=["round-specialists"]))
-        required = {identifier for finding in workspace["findings"] for identifier in
+        required = {identifier for finding in findings for identifier in
                     finding["supporting_evidence"] + finding["counter_evidence"]}
         for evidence in workspace["evidence"]:
             if evidence["evidence_id"] not in required:
@@ -50,6 +54,15 @@ def publish(context, workspace):
                 relations=((identifier, "CITES", "case-source-" + fingerprint([workspace["matter_id"], evidence["source_id"]])),))
             receipts.append(memory.record(record, event_id=["case-workspace-locator", identifier, workspace["snapshot_id"]],
                 upstream=[{"source_ref": "case/workspace.json"}], allow=["round-specialists"]))
+        if ontology is not None:
+            key = "case-ontology-" + fingerprint([scope, workspace["snapshot_id"], ontology["version"]])
+            record = RuntimeRecord(key, "Saved litigation case graph", workspace["captured_at"],
+                "authorized_graph_navigation", {"memory_family": "litigation_case_ontology",
+                    "case_snapshot": workspace["snapshot_id"], "ontology_version": ontology["version"]},
+                notes=_notes({k: ontology[k] for k in ("path", "nodes", "relationships", "passages")}),
+                relations=tuple((key, "INCLUDES_FINDING", identifier) for identifier in finding_records))
+            receipts.append(memory.record(record, event_id=["case-ontology", key],
+                upstream=[{"source_ref": ontology["path"]}], allow=["round-specialists"]))
         receipt = {"status": "Published", "qualification": "Membrane authored graph navigation; frozen source corpus is evidence authority",
                    "receipts": receipts}
         save(context.store.run_dir, "case/workspace_memory.json", receipt)

@@ -14,6 +14,37 @@ See [the conversation guide](conversation_guide.md) for the sample or walkthroug
 
 Make sense of a large collection of case documents. Find important facts, timelines, connections, and conflicting evidence, with links to the original sources. Get draft findings for legal review.
 
+## Work a disputed fact
+
+1. Open **Full report → Questions → Proof chart**. Add the claim or defense
+   and the fact to establish. Start a distinct element for receipt even if
+   the chart already includes dispatch.
+2. Under **Evidence**, open the document, highlight the passage and choose
+   **Capture fact**. Enter wording, evidence role, reviewer and optional witness.
+   Add a Bates or transcript reference after checking it against the original.
+   Choose **Open passage** to verify the citation.
+3. Choose **Ask the graph** in Questions. Ask which records address receipt,
+   then which of those predate termination. Open the cutoff source and a
+   matching record. **Save question** retains the refinements.
+4. In **People & events → Witness preparation**, choose the witness and element.
+   Pair the witness's statement with another exhibit. Save counsel's neutral
+   question and any explanation, then download the editable outline. Use
+   **Identities** to confirm or reverse an alias from a passage.
+5. Open **Timeline** to distinguish the record date from the event described.
+   Choose **Add event from a fact** to enter a source-supported interval.
+   In **Questions → Discovery**, assign a record, owner, internal target and
+   closure test. Close the item with a current supporting fact and explanation.
+6. For a handoff, choose **Save copy**. For the next production, use **Actions
+   → Export review decisions** and attach that file in Configure before the next
+   run of the same matter. Under **Review history → Changes**, compare the older
+   passage with candidates in the new record. Revisit the linked proof, witness
+   question and draft paragraph. Rerun saved questions under **Ask the graph**.
+7. Under **Reports → Reviewed briefing**, download the numbered Word statement
+   and the separate counsel review sheet. Select a linked exhibit in Word to read
+   the quoted passage and locator. Open `case/privilege_log.html` in the owner's
+   confidential archive for privilege review. Choose export fields, check the
+   preview, and download the CSV. Save a counsel working copy to retain log edits.
+
 ## Inputs
 
 - input_folder: Folder of legal sources. Omit to download the pinned public EMC2 sample automatically.
@@ -35,6 +66,11 @@ Discuss next step fills a draft message without sending it. Record wording
 decisions through the existing finding review, then save or export to retain them.
 No discussion starts further work, grants approval or authorizes sharing.
 
+Use **Case graph** in the report to follow links between questions, findings,
+email addresses, documents, and transaction records. Select a connection to see
+its source passage. Chat can answer from the saved graph appendix when Membrane
+retrieves the relevant section. The audit archive includes a queryable graph
+database for direct lookup with the blueprint's `ask_case.py` tool.
 
 
 Consult the published run results and their evidence before making decisions. Missing evidence does not establish that an event or condition did not occur.

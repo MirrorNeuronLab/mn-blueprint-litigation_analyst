@@ -2,9 +2,9 @@
 const primaryNavigation = [
   {label:"Overview", routes:["Overview"]},
   {label:"Findings", routes:["Findings"]},
-  {label:"Questions", routes:["Issues & evidence"]},
+  {label:"Questions", routes:["Issues & evidence", "Proof chart", "Case questions", "Discovery tracker"]},
   {label:"Evidence", routes:["Evidence Explorer", "Comparisons"]},
-  {label:"People & events", routes:["People & relationships"]},
+  {label:"People & events", routes:["People & relationships", "Witness preparation", "Identity review"]},
   {label:"Timeline", routes:["Chronology"]},
   {label:"Reports", routes:["Reports", "Work product"]},
   {label:"Review history", routes:["Activity & audit", "Since last review"]}

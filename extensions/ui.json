@@ -50,7 +50,7 @@
       {
         "path": "inputs.payload.matter_file",
         "label": "Counsel matter intake",
-        "description": "Optional matter.json for questions, exclusions and source-cited transaction records. Add in Configure before starting when needed; Chat cannot clear restricted sources.",
+        "description": "Optional matter.json for claim or defense elements, exclusions, cited transactions and private privilege-log metadata. Add in Configure before starting.",
         "type": "local_path",
         "path_kind": "file",
         "role": "input",
@@ -82,7 +82,7 @@
       {
         "path": "inputs.payload.review_file",
         "label": "Previous review decisions",
-        "description": "Optional review-decisions.json from this matter. Add in Configure when available. Changed evidence requires a fresh wording review.",
+        "description": "Carry forward reviewed facts, witness questions, discovery tasks and saved graph questions from this matter. Use the review-decisions.json exported by the previous report.",
         "type": "local_path",
         "path_kind": "file",
         "role": "input",
@@ -101,7 +101,7 @@
     "prompt_file": "@/payloads/prompts/setup.md",
     "run_guidance": {
       "on_start": "I’ll index the selected documents so the draft can link each finding to its sources and show conflicting evidence.",
-      "web_ui_ready": "Open the draft investigation and follow one finding to its supporting and contrary evidence.",
+      "web_ui_ready": "Open Full report to ask the case graph a question, follow the cited passages and check gaps in the proof chart.",
       "report_ready": "Expand the run summary and read Your next review to see which question needs counsel’s attention.",
       "output_ready": "Open final_report.md in the output folder and start with the next review question for counsel."
     }

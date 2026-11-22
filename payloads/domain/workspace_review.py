@@ -3,6 +3,7 @@ import hashlib
 from types import SimpleNamespace
 
 from .financial_review import build as reconcile
+from .workspace_case_map import case_map
 
 
 def verify(workspace):
@@ -26,56 +27,6 @@ def verify(workspace):
         for r in workspace.get('financial_review', {}).get('events', [])]},
         [SimpleNamespace(**s) for s in sources.values()], {})
     return financial
-
-
-def case_map(workspace):
-    """Address identities, represented communications and annotated transaction records.
-
-    A shared-source link is navigation, never an inferred participation or payment.
-    Event nodes are source records; duplicate messages retain their occurrence IDs.
-    """
-    nodes, edges = {}, []
-    events = workspace['temporal']['events'][:60]
-    temporal_nodes = {n['id']: n for n in workspace['temporal']['nodes']}
-    for event in events:
-        refs = [p['evidence_id'] for p in event['evidence_refs']]
-        nodes[event['id']] = {'id': event['id'], 'label': event['title'], 'kind': 'communication',
-            'date': event['time']['earliest'], 'date_label': event['display'], 'evidence_ids': refs,
-            'qualification': event['qualification'], 'source_ids': event['source_ids'],
-            'occurrence_id': event.get('metric_occurrence_id')}
-        for field, addresses in event['fields']['headers'].items():
-            for address in addresses[:20]:
-                original = temporal_nodes[address]
-                nodes.setdefault(address, {'id': address, 'label': ' / '.join(original['names']) or address,
-                    'detail': address, 'kind': 'correspondent', 'evidence_ids': [], 'source_ids': [],
-                    'qualification': 'Name recorded in email headers. Address-level identity; person mapping is unverified.'})
-                nodes[address]['evidence_ids'] = list(dict.fromkeys(nodes[address]['evidence_ids'] + refs))
-                nodes[address]['source_ids'] = list(dict.fromkeys(nodes[address]['source_ids'] + event['source_ids']))
-                edges.append({'source': address if field == 'From' else event['id'],
-                    'target': event['id'] if field == 'From' else address,
-                    'label': 'From header' if field == 'From' else field + ' header', 'evidence_ids': refs})
-    records = workspace.get('financial_review', {}).get('events', [])[:60]
-    for record in records:
-        key = 'record:' + hashlib.sha256('|'.join(str(record[k]) for k in
-            ('transaction_ref', 'currency', 'ledger_id', 'record_id')).encode()).hexdigest()[:20]
-        transaction = 'transaction:' + record['transaction_ref']
-        nodes.setdefault(transaction, {'id': transaction, 'label': record['transaction_ref'], 'kind': 'transaction',
-            'evidence_ids': [], 'source_ids': [], 'qualification': 'Shared recorded reference; not proof of external payment or settlement.'})
-        nodes[transaction]['evidence_ids'] = list(dict.fromkeys(nodes[transaction]['evidence_ids'] + record['evidence_ids']))
-        nodes[transaction]['source_ids'] = list(dict.fromkeys(nodes[transaction]['source_ids'] + [record['source_id']]))
-        nodes[key] = {'id': key, 'label': record['event_type'].replace('_', ' ').capitalize() + ' · ' + record['currency'] + ' ' + record['amount'],
-            'kind': 'financial_record', 'date': record.get('event_date'), 'date_label': record['date_basis'],
-            'evidence_ids': record['evidence_ids'], 'source_ids': [record['source_id']],
-            'qualification': record['classification_basis']}
-        edges.append({'source': key, 'target': transaction, 'label': 'Recorded reference', 'evidence_ids': record['evidence_ids']})
-        for event in events:
-            if record['source_id'] in event['source_ids']:
-                edges.append({'source': event['id'], 'target': key, 'label': 'Same source',
-                    'evidence_ids': list(dict.fromkeys(record['evidence_ids'] + [p['evidence_id'] for p in event['evidence_refs']]))})
-    return {'nodes': list(nodes.values()), 'edges': edges,
-        'omitted_communications': max(0, len(workspace['temporal']['events']) - len(events)),
-        'omitted_financial_records': max(0, len(workspace.get('financial_review', {}).get('events', [])) - len(records)),
-        'definition': 'Named correspondents → communication records → annotated financial records → transaction references. Links do not establish causation, receipt, identity or liability.'}
 
 
 def attach(workspace):

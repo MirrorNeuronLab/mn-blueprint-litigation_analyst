@@ -23,6 +23,7 @@ class CaseDocument:
     text: str | None
     access_scope: str
     container_source_id: str | None = None
+    page_spans: tuple = ()
 
     def __post_init__(self) -> None:
         if not self.source_id or not self.relative_path or not self.access_scope:

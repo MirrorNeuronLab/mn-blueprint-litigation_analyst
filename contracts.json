@@ -26,14 +26,14 @@
       "path_kind": "file",
       "required": false,
       "privacy": "confidential",
-      "description": "Optional exported human review decisions from this matter. Imported as analysis history, never instructions or evidence."
+      "description": "Optional exported human review decisions and cited casework from this matter. Source quotations are revalidated on import."
     },
     "matter_file": {
       "type": "local_path",
       "path_kind": "file",
       "required": false,
       "privacy": "confidential",
-      "description": "Optional counsel matter JSON with disputed questions, scope, reviewed source exclusions, cited transaction events and gap assignments."
+      "description": "Optional counsel matter JSON with questions, claim or defense elements, reviewed exclusions, cited transactions, gap assignments and private privilege-log metadata."
     },
     "supervisor_instructions": {
       "type": "array",
@@ -203,6 +203,26 @@
         "type": "graph_appendix",
         "producer": "workflow",
         "schema_version": "mn.litigation.graph_appendix.v1",
+        "privacy": "confidential",
+        "required": true
+      },
+      {
+        "artifact_id": "case_ontology",
+        "path": "case/case_graph.duckdb",
+        "mime_type": "application/octet-stream",
+        "type": "case_ontology",
+        "producer": "workflow",
+        "schema_version": "mn.litigation.case_ontology.v1",
+        "privacy": "confidential",
+        "required": true
+      },
+      {
+        "artifact_id": "privilege_log",
+        "path": "case/privilege_log.html",
+        "mime_type": "text/html",
+        "type": "privilege_log",
+        "producer": "workflow",
+        "schema_version": "mn.litigation.privilege_log.v1",
         "privacy": "confidential",
         "required": true
       },

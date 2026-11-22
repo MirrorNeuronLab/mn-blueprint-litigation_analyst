@@ -54,6 +54,13 @@ def publish(context, workspace, *, review_file=None):
         clock = {"at": datetime.now(timezone.utc).isoformat()}
         capture.write_text(json.dumps(clock))
     workspace["captured_at"] = clock["at"]
+    from .casework import prepare as prepare_casework
+    reviews = None
+    if review_file:
+        review_path = Path(review_file)
+        if review_path.is_symlink() or not review_path.is_file() or review_path.stat().st_size > 32*1024*1024:
+            raise ValueError("Review file must be a regular JSON file of up to 32 MiB")
+        reviews = json.loads(review_path.read_text())
     job_root, job_id = context.job_data_dir, context.job_id
     mode = "Job history" if job_root and job_id else "Single snapshot; Job history unavailable"
     epoch = fingerprint([job_id, workspace["matter_id"], workspace["access_scope"]])
@@ -73,6 +80,9 @@ def publish(context, workspace, *, review_file=None):
                 *source_events.get(s["source_id"], [])]
                 if s["text"] is not None else []} for s in workspace["sources"]]
         if not sources:
+            if reviews is not None:
+                apply_reviews(workspace, reviews)
+            prepare_casework(workspace, (reviews or {}).get('casework'))
             workspace["changes"] = {"mode": mode, "previous_snapshot": None, "items": []}
             return workspace
         run_identity = str(context.run_id or root.name)
@@ -92,6 +102,7 @@ def publish(context, workspace, *, review_file=None):
         # An old snapshot supported by now-restricted records cannot enter this package.
         if previous and not set(previous["source_versions"]) <= allowed:
             previous = None
+        prepare_casework(workspace, (reviews or {}).get('casework', (previous or {}).get('casework')))
         old_findings = {f["id"]: f for f in (previous or {}).get("findings", [])}
         changes = []
         for finding in workspace["findings"]:
@@ -115,17 +126,14 @@ def publish(context, workspace, *, review_file=None):
             if not any(f["id"] == identifier for f in workspace["findings"]):
                 changes.append({"kind": "Finding no longer retained", "finding_id": identifier,
                     "before": old["assessment"], "after": "No current retained finding; the prior revision remains historical"})
-        if review_file:
-            review_path = Path(review_file)
-            if review_path.is_symlink() or review_path.stat().st_size > 2*1024*1024:
-                raise ValueError("Review file must be a bounded regular JSON file")
-            apply_reviews(workspace, json.loads(review_path.read_text()))
+        if reviews is not None:
+            apply_reviews(workspace, reviews)
         workspace["changes"] = {"mode": mode, "revision": revision,
             "previous_snapshot": previous["snapshot_id"] if previous else None, "items": changes,
             "definition": "Investigation knowledge revisions, separate from source event dates. Counts may overlap."}
         record = {"snapshot_id": workspace["snapshot_id"], "captured_at": clock["at"],
             "source_versions": {s["source_id"]: s["content_sha256"] for s in workspace["sources"]},
-            "findings": workspace["findings"], "changes": workspace["changes"]}
+            "findings": workspace["findings"], "changes": workspace["changes"], "casework": workspace['casework']}
         report_id = fingerprint([run_identity, workspace["snapshot_id"]])
         # Exact delivery replay returns the same revisions and decisions.
         existing = history.get_report(report_id)
