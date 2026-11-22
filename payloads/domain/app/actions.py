@@ -124,7 +124,7 @@ class InvestigationActions:
                     and "error" not in record["result"]
                 ):
                     return {**record["result"], "reused": True}
-            result = runtime.invoke_skill(**args)
+            result = runtime.invoke_case_skill(**args)
             if "derivation" in result:
                 data.setdefault("derivations", []).append(
                     {"arguments": args, "result": result}

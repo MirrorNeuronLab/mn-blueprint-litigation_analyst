@@ -327,6 +327,12 @@ The graph planner selects named chronology, sender, recipient, document or
 source-clause relationship views.
 Their RGQL is authored and validated by the blueprint; the LLM cannot submit arbitrary graph syntax.
 
+Source searches that exceed the skill's UTF-8 output limit return a reference to
+an immutable JSON artifact under `case/search-results/`. The case worker verifies
+its digest and size and admits complete passages and support groups under the
+existing model evidence budget. The artifact retains the full retrieval witness
+and unresolved obligations for review and replay.
+
 ## Filesystem runtime memory
 
 `text_memory.enabled=true` uses authenticated Membrane TextMemory v1 and

@@ -83,7 +83,7 @@ def collect_evidence(context, work):
                 raise ValueError("Committed evidence action changed or previously failed")
         else:
             try:
-                result = observe_action(action, {"records": records + [{}]}, lambda *_: runtime.invoke_skill(skill, operation, arguments))
+                result = observe_action(action, {"records": records + [{}]}, lambda *_: runtime.invoke_case_skill(skill, operation, arguments))
             except Exception as exc:
                 save(root, action_path, {"action": action, "result": {"error": str(exc)}, "purpose": purpose})
                 raise
@@ -259,7 +259,7 @@ def review_finding(context, work):
             [d['name'] for d in source_manifest(__file__)['skill_dependencies']],
             config=frozen['config'], scope=frozen['memory_scope'])
         runtime.read_skill(DOC)
-        result = runtime.invoke_skill(DOC, 'search', {'query':query,
+        result = runtime.invoke_case_skill(DOC, 'search', {'query':query,
             'top_k':frozen['config']['investigation']['top_k']})
         independent = {'purpose':'independent_counter', 'action':{'query':query},
             'result':cleared_observation(result, frozen['source_review_flags'])}
