@@ -48,6 +48,23 @@ def evidence_room(frozen, stage, instruction, data, schema):
     return max(0, capacity - reserve)
 
 
+class InvalidSearchPair(ValueError):
+    """The planner supplied blank or equivalent evidence searches."""
+
+
+def _validate_plan(schema, value):
+    validate(schema, value)
+    if value["decision"] == "execute":
+        for hypothesis in value["hypotheses"]:
+            support = " ".join(hypothesis["support_query"].casefold().split())
+            counter = " ".join(hypothesis["counter_query"].casefold().split())
+            if not support or not counter or support == counter:
+                raise InvalidSearchPair(
+                    "The planner could not produce distinct support and counter-evidence searches "
+                    f"for enquiry {hypothesis['id']}"
+                )
+
+
 def complete(root, frozen, key, stage, instruction, data, schema, client=None):
     started = time.monotonic()
     replay = (root / f'case/rounds/models/{key}.json').exists()
@@ -70,7 +87,8 @@ def complete(root, frozen, key, stage, instruction, data, schema, client=None):
     try:
         value = durable_json_decision(
             root / f"case/rounds/models/{key}.json",
-            system=system, request=request, schema=schema, validator=validate,
+            system=system, request=request, schema=schema,
+            validator=_validate_plan if stage == 'plan' else validate,
             context_root=root / "case/context-memory",
             context_scope=scope, principal="round-specialists", stage=stage,
             policy=policy, max_tokens=policy.output_tokens,

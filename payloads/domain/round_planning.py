@@ -5,7 +5,7 @@ import time
 from copy import deepcopy
 from .app.planning import object_schema
 from .round_state import open_round, read, save, finish
-from .round_model import complete, evidence_room
+from .round_model import InvalidSearchPair, complete, evidence_room
 from .planning_context import discover
 from .review_scope import limits
 from .matter_intake import prompt_scope
@@ -57,7 +57,6 @@ def plan_round(context, work):
             field["maxItems"] = 0
         previous = [] if not revision else read(root / f"case/rounds/summary-{revision:02d}.json")["findings"]
         instruction = (
-            "On revision zero choose execute with at least one enquiry; later choose execute or stop. "
             "The source_overview contains authorized current-case navigation. Use its filenames and complete source examples "
             "to discover names, events and search terms even when counsel_scope and historical runtime_memory are empty. "
             "Empty historical memory is not an empty source corpus. Navigation is not a report finding: collect support "
@@ -74,11 +73,16 @@ def plan_round(context, work):
             "Tag each enquiry with its supplied counsel_issue_ids, or [] when no counsel issue matches. "
             "Prioritize the supplied counsel questions and intended decision; counsel scope is review direction, not source evidence or verified law. "
             "Track distinct issues; do not silently equate approval, posting, reversal, bank settlement and loss. "
-            "Stop requires a concrete reason and an empty hypotheses list. Do not stop before examining evidence. ")
+        )
+        # Preserve the initial request for replay of existing planner decisions.
+        plan_instruction = (
+            "On revision zero choose execute with at least one enquiry; later choose execute or stop. "
+            f"{instruction}Stop requires a concrete reason and an empty hypotheses list. Do not stop before examining evidence. "
+        )
         data = {"goal": frozen["payload"]["goal"], "counsel_scope": prompt_scope(frozen.get("matter", {})) if frozen.get("matter") else {},
                 "revision": revision, "prior_findings": previous, "remaining_rounds": cfg["max_rounds"] - revision,
                 "graph_views": {**QUERIES, **VIEWS, **TEMPORAL_VIEWS}}
-        room = min(evidence_room(frozen, 'plan', instruction, data, schema),
+        room = min(evidence_room(frozen, 'plan', plan_instruction, data, schema),
                    frozen['config'].get('text_memory', {}).get('max_context_bytes', 32768), 16384)
         # Include the field wrapper and final coverage envelope in the allowance.
         overview = discover(root, frozen, max(0, room - 256))
@@ -91,7 +95,22 @@ def plan_round(context, work):
                 "Increase context_memory.policy.window_tokens or narrow the source scope, then start a new run."
             )
         else:
-            value = complete(root, frozen, f"plan-{revision:02d}", "plan", instruction, data, schema, llm_client)
+            key = f"plan-{revision:02d}"
+            try:
+                value = complete(root, frozen, key, "plan", plan_instruction, data, schema, llm_client)
+            except InvalidSearchPair:
+                correction = (
+                    "Correct the repeated or blank searches. Return an execute plan with distinct, nonempty terms. "
+                    "Use counter_query to find a conflicting record or an ordinary explanation. "
+                    f"{instruction}"
+                )
+                correction_schema = deepcopy(schema)
+                correction_schema["properties"]["decision"]["enum"] = ["execute"]
+                correction_schema["properties"]["hypotheses"]["minItems"] = 1
+                value = complete(
+                    root, frozen, f"{key}-search-correction", "plan", correction,
+                    data, correction_schema, llm_client,
+                )
         if value["decision"] == "execute" and not value["hypotheses"]:
             if not revision:
                 raise ValueError("Execute requires distinct enquiries")
@@ -101,8 +120,6 @@ def plan_round(context, work):
                 raise ValueError("Execute requires distinct enquiries")
             from .round_tasks import validate_graph_query
             for h in value["hypotheses"]:
-                if h["support_query"].strip().casefold() == h["counter_query"].strip().casefold():
-                    raise ValueError("Support and counter-evidence searches must differ")
                 for query in h["graph_tools"]:
                     if query in QUERIES:
                         validate_graph_query(QUERIES[query])

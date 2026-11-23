@@ -482,6 +482,10 @@ The four parent phases remain source preparation → index building → investig
 5. The planner revises enquiries or stops. Replanning occurs only after all
    committed tasks complete; the parent cannot publish while children are running.
 
+Since 5.4.1, the planner requests one correction when the model repeats a search.
+The correction uses the same case context and model budget. Evidence collection
+starts only after the planner validates distinct support and counter-evidence searches.
+
 If a later plan selects execute but proposes no enquiries, the investigation
 finishes with a recorded coverage limitation and publishes the reviewed draft.
 
