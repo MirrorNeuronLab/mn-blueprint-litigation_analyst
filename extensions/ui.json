@@ -15,7 +15,7 @@
       "values": {
         "inputs.payload.input_folder": "",
         "inputs.payload.goal": "Investigate financially relevant events and competing explanations in the synthetic EMC-2 materials. Cite the evidence and state limitations.",
-        "review.profile": "first_pass"
+        "review.profile": "adaptive"
       }
     },
     "real": {
@@ -23,7 +23,7 @@
       "values": {
         "inputs.payload.input_folder": "",
         "inputs.payload.goal": "",
-        "review.profile": "first_pass"
+        "review.profile": "adaptive"
       }
     },
     "fields": [
@@ -59,9 +59,13 @@
       {
         "path": "review.profile",
         "label": "Review scope",
-        "description": "First pass returns a bounded, partial review; standard permits deeper relationship extraction and more investigation rounds.",
+        "description": "Adaptive review follows gaps and conflicting evidence for up to three rounds. First pass runs once. Standard review also uses the configured relationship extraction.",
         "type": "select",
         "choices": [
+          {
+            "label": "Adaptive review",
+            "value": "adaptive"
+          },
           {
             "label": "First pass",
             "value": "first_pass"
@@ -70,6 +74,19 @@
             "label": "Standard review",
             "value": "standard"
           }
+        ]
+      },
+      {
+        "path": "review.objective",
+        "label": "Review objective",
+        "description": "Choose the work the investigation should prepare for counsel.",
+        "type": "select",
+        "choices": [
+          { "label": "Investigation", "value": "investigation" },
+          { "label": "Discovery", "value": "discovery" },
+          { "label": "Case strategy", "value": "case_strategy" },
+          { "label": "Witness preparation", "value": "witness_preparation" },
+          { "label": "Court preparation", "value": "court_preparation" }
         ]
       },
       {

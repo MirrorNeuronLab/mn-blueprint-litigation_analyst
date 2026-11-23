@@ -25,7 +25,9 @@ def test_planner_corrects_duplicate_searches_before_scheduling(tmp_path, monkeyp
     }
     overview = {
         "authorized_readable_sources": 1,
-        "samples": [{"passages": [{"text": "Approval notice. Routine duties explain the correspondence."}]}],
+        "samples": [{"passages": [{"source_id": "case:notice", "content_sha256": "a" * 64,
+                                   "start_offset": 0, "end_offset": 57,
+                                   "text": "Approval notice. Routine duties explain the correspondence."}]}],
     }
     monkeypatch.setattr(round_planning, "open_round", lambda *_: (tmp_path, frozen))
     monkeypatch.setattr(round_planning, "discover", lambda *_: overview)

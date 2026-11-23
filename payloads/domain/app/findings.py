@@ -2,6 +2,8 @@
 
 from .planning import TEXT, STRINGS, object_schema, validate, check_citations
 
+CITATION_BYTE_LIMIT = 2000
+
 FINDING = object_schema(
     {
         "id": {"type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$"},
@@ -57,7 +59,7 @@ def submit_report(data, args, store, investigation_id):
             for e in store.evidence_for(investigation_id)
             if e.evidence_id in citations
         )
-        > 2000
+        > CITATION_BYTE_LIMIT
     ):
         raise ValueError(
             "one finding requires at most 2000 UTF-8 bytes of complete evidence; retrieve focused exact spans"
@@ -130,13 +132,10 @@ def narrative_sections(data, evidence):
         ("counter_evidence", "Counter-evidence and alternative explanations"),
         ("integrity", "Evidence integrity"),
     ]:
-        lines += [f"## {title}", ""]
         selected = [f for f in findings if f["section"] == section]
         if not selected:
-            lines += [
-                "No reviewed finding recorded for this area; coverage remains incomplete.",
-                "",
-            ]
+            continue
+        lines += [f"## {title}", ""]
         for f in selected:
             lines += [
                 f'<a id="finding-{f["id"]}"></a>',
@@ -172,23 +171,17 @@ def narrative_sections(data, evidence):
             "Flagged sources were excluded from substantive findings. See the checkpoint for source IDs and recorded reasons.",
             "",
         ]
-    lines += [
-        "## Report review limitations",
-        "",
-        *["- " + i for i in data.get("report_review", {}).get("issues", [])],
-        "",
-    ]
+    issues = data.get("report_review", {}).get("issues", [])
+    if issues:
+        lines += ["## Report review limitations", "", *["- " + i for i in issues], ""]
     if "report_review" not in data:
         lines += [
             "Report assessment review did not complete. Proposed narrative findings are withheld.",
             "",
         ]
-    lines += [
-        "## Prioritized human follow-up",
-        "",
-        *[f"{i}. {q}" for i, q in enumerate(draft.get("follow_up", []), 1)],
-        "",
-    ]
+    if draft.get("follow_up"):
+        lines += ["## Prioritized human follow-up", "",
+                  *[f"{i}. {q}" for i, q in enumerate(draft["follow_up"], 1)], ""]
     return lines
 
 

@@ -49,7 +49,7 @@ def review_closure(spans, records, cited):
     return [s for s in spans if s['evidence_id'] in selected]
 
 
-def admit(spans, records, limit):
+def admit(spans, records, limit, *, fits_request=None):
     evidence = {s['evidence_id']:s for s in spans}
     groups, paths, unresolved, bound = [], {}, {}, set()
     for n, record in enumerate(records):
@@ -69,6 +69,17 @@ def admit(spans, records, limit):
     for alias in evidence:
         if alias not in bound:
             groups.append(EvidenceGroup('source:'+alias, (alias,)))
+    # Respect caller ranking across searches. Reserve duplicate collection copies
+    # for after distinct content, without changing any source identity or closure.
+    ranks = {key:n for n, key in enumerate(evidence)}
+    groups.sort(key=lambda g: min(ranks[key] for key in g.members if key in ranks))
+    seen, first, copies = set(), [], []
+    for group in groups:
+        basis = frozenset((e.get('content_sha256', key), e.get('start_offset'), e.get('end_offset'))
+                          for key in group.members if (e := evidence.get(key)))
+        (copies if basis in seen else first).append(group)
+        seen.add(basis)
+    groups = first + copies
     by_id = {g.group_id:g for g in groups}
     def render(selected):
         allowed = {m for key in selected for m in by_id[key].members if m in evidence}
@@ -76,7 +87,11 @@ def admit(spans, records, limit):
                 'graph_paths':[paths[key] for key in selected if key in paths],
                 'support_admission':{'status':'incomplete' if unresolved or len(selected)<len(groups) else 'complete',
                     'unresolved_groups':len(unresolved), 'omitted_groups':len(groups)-len(selected)}}
-    outcome = admit_groups(groups, render,
-        measure=lambda v:len(json.dumps(v, ensure_ascii=False).encode()), limit=max(1,limit))
+    def measure(packet):
+        size = len(json.dumps(packet).encode())
+        if size > limit or (fits_request is not None and not fits_request(packet)):
+            return max(1, limit) + 1
+        return size
+    outcome = admit_groups(groups, render, measure=measure, limit=max(1,limit))
     return outcome.rendered or {'evidence':[], 'graph_paths':[], 'support_admission':{
         'status':outcome.status, 'unresolved_groups':len(unresolved), 'omitted_groups':len(groups)}}

@@ -59,6 +59,11 @@ def fresh(workspace):
             **{k: [] for k in MODELS}}
 
 
+def changed_sources(versions, previous):
+    old_hashes = set(previous.values())
+    return {sid for sid, sha in versions.items() if previous and previous.get(sid) != sha and sha not in old_hashes}
+
+
 def prepare(workspace, prior=None):
     book = fresh(workspace)
     sources = {s['source_id']: s for s in workspace['sources']}
@@ -115,10 +120,7 @@ def prepare(workspace, prior=None):
                           'start_offset': a['start'], 'end_offset': a['end'], 'text': a['quote'],
                           'provenance_kind': 'Counsel-selected source passage'}
     workspace['evidence'] = list(spans.values())
-    old_hashes = set(previous_versions.values())
-    pending.update(
-        sid for sid, digest in book['versions'].items() if previous_versions and
-        previous_versions.get(sid) != digest and digest not in old_hashes)
+    pending.update(changed_sources(book['versions'], previous_versions))
     book['pending_sources'] = sorted(pending)
     workspace['casework_changed_sources'] = book['pending_sources']
     return book

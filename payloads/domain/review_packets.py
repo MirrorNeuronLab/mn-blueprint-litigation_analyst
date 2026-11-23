@@ -20,6 +20,31 @@ def counter_query(hypothesis, matter):
     return ' '.join([*matter.get('transaction_refs', []), question, terms])[:4000]
 
 
+def reread_leads(leads, documents, flags, records):
+    """Hydrate planned locations from cleared originals, preserving each dependency group."""
+    sources = {d.source_id: d for d in documents if d.text is not None and d.source_id not in flags}
+    found = {p['evidence_id'] for r in records for p in r['result'].get('passages', [])}
+    passages, groups = {}, []
+    for refs in leads:
+        if not refs or any(ref['source_id'] not in sources for ref in refs):
+            continue
+        component = {}
+        for ref in refs:
+            doc = sources[ref['source_id']]
+            start, end = ref['start_offset'], ref['end_offset']
+            if doc.content_sha256 != ref['content_sha256'] or not 0 <= start < end <= len(doc.text):
+                raise ValueError('Planning lead no longer matches its frozen source')
+            eid = hashlib.sha256(f'{doc.source_id}|{doc.content_sha256}|{start}|{end}'.encode()).hexdigest()[:32]
+            component[eid] = {**ref, 'evidence_id': eid, 'text': doc.text[start:end]}
+        if len(component) == 1 and component.keys() <= found:
+            continue
+        passages.update(component)
+        groups.append({'id': f'lead-{len(groups)}', 'source_evidence_ids': list(component), 'complete': True})
+    return {'purpose': 'planning_source', 'action': {'operation': 'reread_frozen_planning_sources'},
+            'result': {'passages': list(passages.values()), 'support_groups': groups,
+                       'status': 'selected_sources', 'exhaustive': False}}
+
+
 def supplement(documents, flags, matter, records, byte_limit):
     """Use complete small corpora; otherwise expand only selected short sources.
 

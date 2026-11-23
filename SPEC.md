@@ -1,5 +1,61 @@
 # Litigation Analyst specification
 
+## Adaptive review and Membrane search reuse (5.6)
+
+The default adaptive profile uses structural indexing and the existing limits
+of three rounds, two enquiries per round and sixteen investigation decisions.
+The reviewer records the disposition of the proposed finding, the supporting
+and contrary searches, the independent search, and a follow-up route. Replanning
+uses the latest reviewed revision of each enquiry. A withheld finding, conflicting
+accounts, a record to reread, an open question or an unexamined counsel issue can
+trigger more work. Handling and external record requests pass to counsel. Filter
+completed enquiries individually when a proposal mixes repeated and new work.
+
+Bind collector search memory to the Job, run, specialist principal, sealed index
+and exact search parameters. Preserve the search result, dependencies, unresolved
+coverage and observation time before publishing its Membrane record. Validate the
+pinned Membrane revision and the referenced artifact hash on reuse. Recheck each
+passage against cleared frozen sources before assessment. Independent review
+always searches the originals on first execution. Write separate, qualified
+Membrane records for independent review, linked to the assessment. A bounded
+analytical query selects current enquiry revisions within the case snapshot.
+Store replay receipts in the confidential run audit. With runtime recall disabled,
+source searches and the review queue continue using the frozen corpus.
+
+The review objective directs planning, assessment and draft presentation.
+Discovery prepares record requests and closure tests, case strategy compares
+accounts, witness preparation pairs questions with exhibits, and court
+preparation checks factual citations. All four produce drafts for counsel.
+On a new run with a scoped review export, prioritize changed source content
+alongside existing material. An identical copy supplies no new content basis.
+
+## Evidence admission and reviewed findings (5.5)
+
+Plan from cleared, goal-relevant source examples and a spread of distinct
+contents. Carry up to three relevant planning locations per enquiry into evidence
+collection. Re-read their frozen source bytes and retain complete dependency
+groups alongside the ranked search results. Budget each assessor and independent reviewer request against its
+selected passages, associated search coverage, visible financial records and
+response schema. Admit required source dependencies together. Give original
+evidence priority over graph previews and duplicate collection copies.
+Reserve 8,192 output tokens within a default 65,536-token working window. Keep each
+assessment focused on one attributed finding and one decisive follow-up.
+Allow the primary model up to 540 seconds per request within the existing
+600-second specialist step timeout.
+Each short assessor citation resolves to one ledger ID, frozen source hash and
+exact character span in the saved request. Restore ledger IDs before recording
+the assessment, work items or independent review.
+Constrain finding citations to visible exact passages and preserve the
+2,000-byte aggregate citation limit. The reviewer checks each material
+assertion against the marked direct citations. A reference elsewhere in the
+packet cannot supply a citation missing from the finding. A source-attributed statement may clear
+independent review even when the broader enquiry remains unresolved.
+
+The draft opens with retained findings, qualifications and links to the exact
+source passages, including when counsel supplied no issue definitions. Show
+the enquiries examined and the remaining questions. Display optional transaction
+tables, contrary citations and work assignments when their data exists.
+
 ## Counsel review and supplemental productions (5.4)
 
 The matter intake can supply a claim, defense or issue with zero or more
@@ -609,13 +665,13 @@ remote-model report or factual-accuracy result is claimed from that attempt.
 
 ## Version 3.1: counsel-directed first review
 
-The default `review.profile=first_pass` performs one round (up to two enquiries),
+The optional `review.profile=first_pass` performs one round (up to two enquiries),
 uses observed structural relationships, and limits investigation decisions to six.
 A separate harmless readiness decision checks the selected model before source
 acquisition or case inference. It sends no case material, preserves the configured
 provider, and fails with `case/model_preflight.json` when the readiness request cannot
 complete or its structured result is invalid. Preflight inherits the selected model's
-configured request timeout (180 seconds in the primary profile). An optional positive,
+configured request timeout (540 seconds in the primary profile). An optional positive,
 finite `model_preflight.timeout_seconds` only shortens that limit; omission or null
 inherits it. SDK preparation and transport/repair attempts can take longer than one
 request timeout. Receipts retain the effective timeout and a safe failure reason;

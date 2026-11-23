@@ -17,6 +17,7 @@ from .evidence.store import EvidenceStore
 from .handling import review_flags
 from .matter_intake import load as load_matter
 from .review_scope import limits
+from .assessment_citations import keys_for
 
 
 def read(path):
@@ -102,8 +103,9 @@ def checkpoint(root, frozen):
         latest[value["hypothesis"]["id"]] = value
     for value in latest.values():
         hypotheses[value["hypothesis"]["id"]] = {**value["hypothesis"], "work_items": value["work_items"], "counsel_issue_ids": value.get("counsel_issue_ids", [])}
+        keys = keys_for(value.get('evidence_review_coverage', {}).get('admitted_evidence_ids', []))
         for f in value["report"]["findings"]:
-            findings[f["id"]] = f
+            findings[f["id"]] = {**f, 'citation_keys': {i: keys[i] for i in f['evidence_ids'] if i in keys}}
         follow.extend(value["report"]["follow_up"])
     for path in sorted((root / "case/rounds").glob("r*-review.json")):
         value = read(path)

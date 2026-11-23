@@ -13,7 +13,7 @@
       "model": "default",
       "backend": "llama.cpp",
       "api_base": "auto",
-      "timeout_seconds": 180,
+      "timeout_seconds": 540,
       "max_tokens": 8192,
       "num_retries": 0,
       "required": true

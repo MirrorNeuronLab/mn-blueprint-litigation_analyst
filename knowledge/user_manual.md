@@ -4,6 +4,12 @@
 
 I organize approved matter documents into draft findings, timelines and competing explanations so counsel can inspect the evidence and decide what to investigate next.
 
+Adaptive review follows conflicting accounts, missing support and independent
+review objections for up to three rounds. In Configure, choose **First pass**
+for a single round or choose a **Review objective** such as witness preparation.
+Membrane keeps the searches and reviewed enquiries for the current run. Open
+the draft to inspect the original passages behind each finding.
+
 Choose an authorized legal-document or email folder, or the offered public sample. A clear question, handling scope and exclusions help focus the review. Counsel matter intake and prior review decisions are optional existing inputs; they are not required just to try the first pass. Do not paste privileged documents into ordinary conversation.
 
 Expect final_report.md, source-linked findings and an audit trail; a published offline investigation view helps inspect support, contradictions, relationships and chronology. All findings are drafts for human legal review. A relationship or co-occurrence is an investigation lead, not proof of intent, delivery, knowledge, wrongdoing or liability.

@@ -8,6 +8,36 @@ The report opens with the review handoff and case graph. Review coverage, the
 stopping reason and next steps are available even when no draft findings were
 retained. Existing frozen runs retain their original files and delivery state.
 
+## Adaptive investigation (5.6)
+
+**Adaptive review** is the default for new investigations. Each round collects
+supporting and contrary passages and sends the proposed finding to an independent
+reviewer. A rejected finding can reopen with the reviewer's specific objection.
+Conflicting accounts can prompt a search for corroboration. A missing record can
+lead to a reread or a question for counsel. The co-worker stops when the remaining
+work belongs to counsel, further searches repeat completed work, or a run limit
+is reached. Adaptive review permits up to three rounds and uses structural
+relationships during indexing.
+
+In **Configure → Review objective**, choose investigation, discovery, case
+strategy, witness preparation or court preparation. For example, witness
+preparation directs the enquiry toward a statement and a dated exhibit. The
+draft groups supporting and contrary passages with the proposed follow-up.
+Counsel decides how to use the draft.
+
+Membrane saves each collector search and its verified result reference within
+the run. Repeating the exact search against the same frozen index reuses the
+result, including an empty result. The collector checks returned passages against
+the authorized sources again. Independent reviewers run a fresh counter-search.
+The next planner can retrieve the latest independent review for each enquiry,
+including withheld findings, searches already tried and the next record to check.
+Exact passages in the frozen case files supply the citations.
+
+For a supplemental production, start a new run with the updated folder and its
+previous review export. If the saved casework covers the same matter and its
+sources are still in scope, planning gives new or revised content priority
+alongside earlier records. Each run retains its own search and review history.
+
 ## Counsel review in the full report (5.4)
 
 Start at **Questions → Proof chart**. Define the elements of a claim or defense.
@@ -248,13 +278,13 @@ reserves unchanged until a corrected factual baseline and attorney review suppor
 shortening them. No speed or accuracy gain is claimed solely from these changes.
 
 
-The default `review.profile=first_pass` performs one round (up to two enquiries),
+The optional `review.profile=first_pass` performs one round (up to two enquiries),
 uses observed structural relationships, and limits investigation decisions to six.
 A separate harmless readiness decision checks the selected model before source
 acquisition or case inference. It sends no case material, preserves the configured
 provider, and records readiness in `case/model_preflight.json`. The current SDK can report
 unsupported token counting as unknown without blocking model generation. Preflight uses
-the selected model's configured request timeout (180 seconds in the primary profile).
+the selected model's configured request timeout (540 seconds in the primary profile).
 An optional positive `model_preflight.timeout_seconds` can shorten that timeout;
 omitting it or setting it to null inherits the model setting. SDK preparation and
 transport/repair attempts can take longer than one request timeout. The receipt records
@@ -438,7 +468,7 @@ mn blueprint run ./litigation_analyst --node mirror_neuron@10.0.4.26 \
 
 Omitting the folder or leaving it blank in the setup form downloads the pinned
 public [EMC-2 synthetic sample](https://github.com/jur1st/EMC-2/). The sample
-action starts a first-pass analysis with a neutral, source-cited investigation goal. Invalid
+action starts an adaptive review with a neutral, source-cited investigation goal. Invalid
 custom folders fail explicitly. The platform stages local inputs to the worker;
 never replace the local path with a guessed Spark path. Inputs are frozen before
 analysis, never executed or modified. Do not put outputs inside the input folder.
@@ -486,6 +516,17 @@ Since 5.4.1, the planner requests one correction when the model repeats a search
 The correction uses the same case context and model budget. Evidence collection
 starts only after the planner validates distinct support and counter-evidence searches.
 
+In 5.5, the planner samples passages relevant to the review goal alongside a
+spread of distinct sources. The collector re-reads relevant planning passages
+from their frozen sources so a later ranked search can also use the records that
+prompted the enquiry. For each assessor and reviewer, the blueprint budgets
+the actual passages, their citation choices, and their required context together.
+Distinct content takes priority over extra collection copies. The report opens
+with independently checked draft findings and links to their exact passages.
+An enquiry can remain open while a narrower fact, such as a recorded estimate,
+is supported. When nothing clears review, the report shows the questions examined
+and outstanding evidence work.
+
 If a later plan selects execute but proposes no enquiries, the investigation
 finishes with a recorded coverage limitation and publishes the reviewed draft.
 
@@ -497,7 +538,11 @@ per round. `dynamic_investigation.max_rounds` can reduce the three-round ceiling
 graph-view operations, plus up to six independent reviewer source searches and 16 investigation model decisions, including the final
 stop decision. Legal relationship indexing has a separate bounded extraction
 allowance; a source graph view may execute up to four native adjacency queries.
-Investigation responses use `context_memory.policy.output_tokens` (2,048 by default), bounded by the configured model client. The same reserve is used for evidence admission and dispatch. The existing elapsed deadline applies;
+Investigation decisions use a 65,536-token working window. Each request reserves
+up to 8,192 output tokens, within the primary model client's configured limit.
+Use `context_memory.policy.window_tokens` and `context_memory.policy.output_tokens`
+to tune these budgets. The SDK caps output at the smaller of the requested
+reserve and `llm.configs.primary.max_tokens`. The existing elapsed deadline applies;
 cancellation and deadline checks occur at planning boundaries. Failed specialists
 fail the workflow explicitly rather than producing a successful-looking draft.
 

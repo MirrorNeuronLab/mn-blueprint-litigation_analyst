@@ -1,5 +1,6 @@
 """Actionable evidence requests, with ownership supplied only by counsel."""
 from mn_temporal_graph_skill import fingerprint
+from pathlib import PurePosixPath
 import re
 
 
@@ -15,9 +16,10 @@ def classify(gap, documents):
     # These named record classes identify existing documents, not whether an
     # approval authorizes a different amount or a ledger proves bank settlement.
     classes = {'ledger':r'ledger|accounting entries', 'policy':r'policy|policies'}
-    matches = [d.source_id for d in documents if d.text and any(
-        re.search(pattern, request) and re.search(pattern, d.relative_path + ' ' + d.text.splitlines()[0], re.I)
-        for pattern in classes.values())]
+    matches = [d.source_id for d in documents if d.text and (
+        PurePosixPath(d.relative_path).name.casefold() in request or any(
+            re.search(pattern, request) and re.search(pattern, d.relative_path + ' ' + d.text.splitlines()[0], re.I)
+            for pattern in classes.values()))]
     if matches:
         return {**gap, 'question':'Internal reread: ' + gap['question'],
             'requested_record':'Already available for internal reread: ' + gap['requested_record'],
