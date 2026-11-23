@@ -64,8 +64,11 @@ def build(workspace):
             if gaps:
                 gap = gaps[0]
                 internal = gap.get('work_type') == 'internal_reread'
+                record = gap.get('requested_record')
+                reason = ('The proposed record to check is ' + record.rstrip('.') + '.'
+                          if record else gap['why_it_matters'])
                 next_review = question('gap', gap['question'],
-                    ('Matching records are already available. Re-read them before requesting additional evidence. ' if internal else '') + gap['why_it_matters'],
+                    ('Matching records are already available. Re-read them before requesting additional evidence. ' if internal else '') + reason,
                     'Before planning further evidence work', gap['source_evidence_ids'], gap_id=gap['id'])
             else:
                 unexamined = next((q for q in workspace.get('counsel_issues', []) if not q.get('hypothesis_ids')), None)

@@ -3,7 +3,6 @@
 from mn_sdk.blueprint.hooks import activity_operation
 import json
 import os
-import time
 from pathlib import Path
 
 from mn_sdk.blueprint.context import source_manifest
@@ -14,7 +13,7 @@ from mn_sdk.blueprint.storage import (
 )
 from .indexing import validate_indexes
 from .evidence.store import EvidenceStore
-from .handling import review_flags
+from .handling import permitted_sources, review_flags
 from .matter_intake import load as load_matter
 from .review_scope import limits
 from .assessment_citations import keys_for
@@ -71,21 +70,29 @@ def initialize(context, inputs):
     corpus, receipt = validate_indexes(case, context.config["investigation"]["access_scope"])
     descriptor = source_manifest(__file__)["workflow"]["child_workflows"]["investigate_case_evidence"]
     cfg = limits(context.original_config)
+    if cfg["max_review_questions"] < 1:
+        raise ValueError("The model decision allowance is too small to plan, edit and investigate one question")
     if not 1 <= cfg["max_rounds"] <= descriptor["max_rounds"] or not 1 <= cfg["hypotheses_per_round"] <= 2:
         raise ValueError("Dynamic investigation exceeds the admitted workflow bounds")
+    if not cfg["hypotheses_per_round"] <= cfg["max_review_questions"] <= (descriptor["max_steps_per_round"] - 1) // 4:
+        raise ValueError("The question plan exceeds the admitted number of evidence and review tasks")
     store = EvidenceStore(case / "evidence.sqlite3")
-    store.add_sources(corpus.scan())
+    documents = tuple(corpus.scan())
+    store.add_sources(documents)
     existing = store.query_readonly("SELECT id FROM investigations ORDER BY id")
     identifier = existing[0]["id"] if existing else store.create_investigation(
         payload["goal"], corpus.access_scope, llm_model="default", graph_path=case / "evidence.rgx")
     name = "case/rounds/context.json"
     if not (root / name).exists():
+        matter = load_matter(root)
+        allowed = permitted_sources(context.config.get("workspace", {}), documents)
+        flags = {d.source_id: "Outside the selected review scope" for d in documents if d.source_id not in allowed}
+        flags.update(review_flags(documents, matter["exclusions"]))
         save(root, name, {"config": context.original_config, "payload": payload, "indexed": indexed,
             "memory_scope": {"job_id": context.job_id or os.environ.get("MN_JOB_ID"),
                              "run_id": context.run_id or os.environ.get("MN_WORKFLOW_RUN_ID") or os.environ.get("MN_RUN_ID")},
             "investigation_id": identifier, "indexes": receipt,
-            "deadline": time.time() + cfg["seconds"], "review_plan": cfg, "matter": load_matter(root),
-            "source_review_flags": review_flags(corpus.scan(), load_matter(root)["exclusions"])})
+            "review_plan": cfg, "matter": matter, "source_review_flags": flags})
     frozen = read(root / name)
     if frozen["indexes"] != receipt or frozen["config"] != context.original_config or frozen["payload"] != payload or frozen["indexed"] != indexed:
         raise ValueError("Investigation binding changed")
@@ -102,7 +109,7 @@ def checkpoint(root, frozen):
         value = read(path)
         latest[value["hypothesis"]["id"]] = value
     for value in latest.values():
-        hypotheses[value["hypothesis"]["id"]] = {**value["hypothesis"], "work_items": value["work_items"], "counsel_issue_ids": value.get("counsel_issue_ids", [])}
+        hypotheses[value["hypothesis"]["id"]] = {**value["hypothesis"], "origin": value.get("question_origin", "Model enquiry"), "work_items": value["work_items"], "counsel_issue_ids": value.get("counsel_issue_ids", [])}
         keys = keys_for(value.get('evidence_review_coverage', {}).get('admitted_evidence_ids', []))
         for f in value["report"]["findings"]:
             findings[f["id"]] = {**f, 'citation_keys': {i: keys[i] for i in f['evidence_ids'] if i in keys}}
@@ -119,11 +126,12 @@ def checkpoint(root, frozen):
         "report_review": {"accepted_ids": sorted(accepted), "issues": list(dict.fromkeys(issues))}}}
 
 
-def finish(context, frozen, reason, reference, revision):
+def finish(context, frozen, reason, reference, execution, revision):
     from .app.review import build_review
     from .state import terminal
     root = context.store.run_dir
     state = checkpoint(root, frozen)
     state["stop_reason"] = reason
     summary = build_review(state, EvidenceStore(root / "case/evidence.sqlite3"), frozen["payload"]["goal"])
-    return terminal(context, frozen["indexed"], frozen["payload"], state, summary, context=reference, revision=revision)
+    return terminal(context, frozen["indexed"], frozen["payload"], state, summary,
+                    context=reference, execution=execution, revision=revision)

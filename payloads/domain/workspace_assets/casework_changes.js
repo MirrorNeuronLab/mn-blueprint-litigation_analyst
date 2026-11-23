@@ -1,4 +1,17 @@
 "use strict";
+const cwStop=new Set("what which who whom whose where when shows show me evidence documents document records record passages passage has have had do does did is was are were has the a an any of on for those these them only ones that this our customer address addresses about before after prior to predate predates earlier later than support supports contradicts contradict identify there and can i see find establish establishes whether list search were element elements proof facts fact claim defense against same".split(" "));
+function cwTerms(text){
+  return [...new Set((text.toLowerCase().match(/[\p{L}\p{N}@._-]+/gu)||[]).map(t=>t.replace(/^[._-]+|[._-]+$/g,"")).filter(t=>t&&!cwStop.has(t)))];
+}
+function cwWordSet(word){
+  if(/^(recei(pt|v)|acknowledg|deliver)/.test(word))return ["receipt","receiv","acknowledg","deliver"];
+  if(/^(sent|send|dispatch|mail(?:ed|ing)?$)/.test(word))return ["sent","send","dispatch","mailed"];
+  if(/^(terminat|cancel)/.test(word))return ["terminat","cancel"];
+  if(/^(testimony|testif|deposition)/.test(word))return ["testimony","testif","deposition"];
+  if(/^(notic|notification)/.test(word))return ["notice","notification"];
+  return [word];
+}
+function cwContains(text,word){return cwWordSet(word).some(w=>text.includes(w));}
 function cwImpacts(){
   const book=cwBook(),idx=cwIndexData(),changed=new Set(W.casework_changed_sources||[]);
   const byElement=new Map(), material=new Map();

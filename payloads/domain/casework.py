@@ -109,7 +109,6 @@ def prepare(workspace, prior=None):
     workspace['casework'] = book
     workspace.setdefault('capabilities', {}).update(
         legal_elements='Define claims, defenses and required proof in the proof chart.',
-        case_qa='Ask scoped questions and follow-ups in the report using the saved graph and its indexed source passages.',
         identity_corrections='Review and reverse source-linked aliases within this matter.')
     spans = {p['evidence_id']: p for p in workspace.get('evidence', [])}
     for fact in book['facts']:

@@ -52,21 +52,17 @@ def test_planner_corrects_duplicate_searches_before_scheduling(tmp_path, monkeyp
             })
 
     context = SimpleNamespace(resources={"llm": Model()})
-    work = {"seed": {"context": {"path": "case/rounds/context.json"}}, "_child": {"revision": 0}}
     rounds = tmp_path / "case/rounds"
     if corrected_query == "routine duties":
-        plan = round_planning.plan_round(context, work)
-        assert plan["tasks"][0]["template"] == "collect_litigation_evidence"
-        task = json.loads((rounds / "tasks/r01-H01.json").read_text())
-        assert task["hypothesis"]["counter_query"] == corrected_query
-        assert round_planning.plan_round(context, work) == plan
+        proposal, sampled = round_planning.propose(context, tmp_path, frozen, 0)
+        assert proposal["hypotheses"][0]["counter_query"] == corrected_query
+        assert sampled == overview
         assert (rounds / "models/plan-00-search-correction.json").is_file()
     else:
         with pytest.raises(ValueError, match="distinct support and counter-evidence searches"):
-            round_planning.plan_round(context, work)
-        assert not (rounds / "proposal-00.json").exists()
-        assert not (rounds / "tasks").exists()
+            round_planning.propose(context, tmp_path, frozen, 0)
         assert not list((rounds / "models").glob("*.json"))
+    assert not (rounds / "tasks").exists()
 
     assert len(requests) == 2
     assert requests[0][1]["source_overview"] == requests[1][1]["source_overview"] == overview

@@ -21,6 +21,19 @@ async function pilot(root) {
     await tab.click();
   };
   const form=()=>page.locator("#cw-editor");
+  async function expectReadableFields(fields) {
+    const sizes = await fields.evaluateAll(elements => elements.map(field => {
+      const style = getComputedStyle(field);
+      const available = field.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const {left, right} = field.getBoundingClientRect();
+      return { name: field.name, available, lineHeight: parseFloat(style.lineHeight), left, right, viewport: document.documentElement.clientWidth };
+    }));
+    assert(sizes.length > 0, "Expected a visible form field");
+    for (const {name, available, lineHeight, left, right, viewport} of sizes) {
+      assert(available + 1 >= lineHeight, `${name} has ${available}px for a ${lineHeight}px text line`);
+      assert(left >= -1 && right <= viewport + 1, `${name} extends past the edge of the screen`);
+    }
+  }
   async function download(name,trigger){
     const promise=page.waitForEvent("download");
     await trigger();
@@ -50,19 +63,40 @@ async function pilot(root) {
     await page.keyboard.press("Escape");
   }
   try{
-    await page.goto(pathToFileURL(join(root,"first/web/index.html")).href);
-    await button("Ask the case graph").click();
-    async function ask(q){await page.getByLabel("Question about this matter").fill(q);await button("Ask question").click();}
-    await ask("Which records address receipt?");
-    await expect(page.locator("#content")).toContainText("2 source copies");
-    await expect(page.locator("#content .cw-row").filter({hasText:"I did not receive the notice"})).toBeVisible();
-    await ask("Which of those predate termination?");
-    await expect(page.locator("#content")).toContainText("before 2024-05-10");
-    await expect(page.locator("#content .cw-row").filter({hasText:"deposition.txt"})).toHaveCount(0);
-    await button("Save question").click();
-    await nav("Questions");await button("Proof chart").click();
+    const reportUrl=pathToFileURL(join(root,"first/web/index.html")).href;
+    await page.goto(reportUrl);
+    await expect(page.getByRole("tab")).toHaveCount(10);
+    await expect(button("More views")).toHaveCount(0);
+    await expect(button("Explore case graph")).toBeVisible();
+    await expect(page.locator("#case-graph-canvas")).toHaveCount(0);
+    await expect(button("Ask the case graph")).toHaveCount(0);
+    await button("Explore case graph").click();
+    await expect(page.getByLabel("Find in graph")).toBeVisible();
+    await expect(button("Ask the graph")).toHaveCount(0);
+    const stage=page.getByRole("region",{name:"Interactive case graph"});
+    const initialZoom=await page.locator("#case-graph-scale").textContent();
+    await button("Zoom in").click();
+    await expect(page.locator("#case-graph-scale")).not.toHaveText(initialZoom);
+    await stage.focus();await page.keyboard.press("Home");
+    await button("Inspect Proof element · Customer received notice for shipment A").click();
+    await button("Trace to case goal").click();
+    await expect(button("Trace to case goal")).toHaveAttribute("aria-pressed","true");
+    await expect(stage.locator(".case-graph-node.is-dim")).not.toHaveCount(0);
+    await nav("People & events");await button("Witness preparation").click();
+    const witnessForm = page.locator("#cw-witness-filter");
+    await expect(witnessForm.getByLabel("Witness", {exact:true})).toBeDisabled();
+    await expect(witnessForm.locator('[name="witness"] option:checked')).toHaveText("No witnesses recorded");
+    await expect(button("Choose witness and issue")).toBeDisabled();
+    await expectReadableFields(witnessForm.locator("select"));
+    await page.goto(reportUrl+"#"+encodeURIComponent(JSON.stringify({view:"Case questions"})));
+    await expect(page.getByRole("heading",{name:"Questions",exact:true})).toBeVisible();
+    await expect(button("Issue review")).toHaveAttribute("aria-pressed","true");
+    await expect(button("Ask the graph")).toHaveCount(0);
+    await expect(page.getByLabel("Question about this matter")).toHaveCount(0);
+    await button("Proof chart").click();
     await expect(page.locator("#content")).toContainText("Open proof gap");
     await button("Add element").click();
+    await expectReadableFields(form().locator('select, input[type="text"]'));
     await form().getByLabel("Type",{exact:true}).selectOption("Claim");
     await form().getByLabel("Claim, defense or issue").fill("Delivery obligation");
     await form().getByLabel("Fact to establish").fill("Identity of signer");
@@ -84,6 +118,17 @@ async function pilot(root) {
     await expect(page.locator("#content")).toContainText("Overdue");
     await button("Proof chart").click();
     await el.getByRole("button",{name:"Prepare witness"}).click();
+    await expect(witnessForm.getByLabel("Witness", {exact:true})).toHaveValue("Jordan Lee");
+    await expect(button("Choose witness and issue")).toBeEnabled();
+    await page.setViewportSize({width:390,height:850});
+    await expect(button("More views")).toBeVisible();
+    await expect(page.getByRole("tab",{name:"People & events"})).toHaveAttribute("aria-selected","true");
+    await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    await expectReadableFields(witnessForm.locator("select"));
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.evaluate(() => document.documentElement.style.removeProperty("font-size"));
+    await page.setViewportSize({width:1280,height:850});
+    await button("Choose witness and issue").click();
     await button("Add comparison question").click();
     await form().getByLabel("Witness’s own statement").selectOption({label:"Witness denies receipt of A"});
     await form().getByLabel("Comparison exhibit").selectOption({label:"Receipt relates to shipment B"});
@@ -97,11 +142,18 @@ async function pilot(root) {
     await form().getByLabel("Passage establishing this link").selectOption({label:"Jordan Lee used J. Lee"});
     await form().getByLabel("Reviewed by").fill("Pilot counsel");
     await button("Confirm link").click();
-    await button("Case graph").click();
-    await page.getByRole("searchbox",{name:"Find graph objects"}).fill("J. Lee");
+    await nav("Case graph");
+    await page.getByRole("searchbox",{name:"Find in graph"}).fill("J. Lee");
     await button("Search graph").click();
-    await expect(page.locator("svg .map-link").filter({has:page.locator("title",{hasText:"Confirmed identity"})})).toHaveCount(1);
-    await button("Identities").click();await button("Reverse link").click();
+    await button("Inspect Confirmed alias · J. Lee").click();
+    const graphDetail=page.locator("#case-graph-detail");
+    await graphDetail.getByText("Connections (1)",{exact:true}).click();
+    await graphDetail.getByRole("button",{name:"Confirmed identity · Jordan Lee"}).click();
+    await expect(graphDetail.getByRole("heading",{name:"Confirmed identity",exact:true})).toBeVisible();
+    await graphDetail.locator('[data-action="evidence"]').click();
+    await expect(page.locator("#cited-span")).toHaveText("Jordan Lee also used the name J. Lee for shipment B.");
+    await page.keyboard.press("Escape");
+    await nav("People & events");await button("Identities").click();await button("Reverse link").click();
     await form().getByLabel("Reviewed by").fill("Pilot counsel");await button("Reverse link").last().click();
     await expect(page.locator("#content")).toContainText("Reversal");
     await nav("Timeline");await expect(page.locator("#content")).toContainText("early April 2024");
@@ -118,7 +170,7 @@ async function pilot(root) {
     await page.getByRole("button",{name:"Actions",exact:true}).click();
     await download("review-from-browser.json",()=>page.getByText("Export review decisions",{exact:true}).click());
     const packet=JSON.parse(await readFile(join(root,"review-from-browser.json"),"utf8"));
-    assert.equal(packet.casework.tasks.length,1);assert.equal(packet.casework.queries.length,1);
+    assert.equal(packet.casework.tasks.length,1);assert.equal(packet.casework.queries.length,0);
     const second=join(root,"supplement-"+Date.now());
     execFileSync(process.env.PILOT_PYTHON||"python3",[join(__dirname,"test_casework.py"),second,"--review",join(root,"review-from-browser.json")]);
     await page.goto(pathToFileURL(join(second,"web/index.html")).href);
@@ -126,22 +178,22 @@ async function pilot(root) {
     await expect(page.locator("#content")).toContainText("acknowledge receipt");
     await expect(page.locator("#content")).toContainText("Deposition question");
     await expect(page.locator("#content")).toContainText("Statement paragraph");
+    const addition=page.locator(".cw-split").filter({hasText:"I, Jordan Lee, acknowledge receipt of the notice for shipment A"}).first();
+    await addition.getByRole("button",{name:"Open passage"}).click();
+    await expect(page.locator("#cited-span")).toContainText("acknowledge receipt");
+    await page.keyboard.press("Escape");
     await nav("Reports");await button("Reviewed briefing").click();
     await expect(button("Download statement of facts (.docx)")).toBeDisabled();
-    await nav("Questions");await button("Ask the graph").click();
-    await page.locator('[data-action="cw-rerun-query"]').click();
-    await expect(page.locator("#content .cw-row").filter({hasText:"acknowledgment.txt"})).toBeVisible();
-    await page.locator("#content .cw-row").filter({hasText:"acknowledgment.txt"}).getByRole("button",{name:"Open passage"}).click();
-    await expect(page.locator("#cited-span")).toContainText("acknowledge receipt");await page.keyboard.press("Escape");
+    await nav("Questions");
+    await expect(button("Issue review")).toHaveAttribute("aria-pressed","true");
     await page.setViewportSize({width:510,height:850});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.setViewportSize({width:1280,height:850});
     await page.screenshot({path:join(root,"case-questions.png")});
-    await button("Show matching records on graph").click();
-    await expect(page.getByRole("button",{name:"Inspect acknowledgment.txt",exact:true})).toBeVisible();
+    await nav("Case graph");
+    await expect(page.getByLabel("Find in graph")).toBeVisible();
+    await page.getByRole("button",{name:/^Inspect /}).first().click();
     await page.screenshot({path:join(root,"case-graph.png")});
-    await button("Back to question").click();
-    await expect(page.locator("#content")).toContainText("before 2024-05-10");
     await capture("acknowledgment.txt","I, Jordan Lee, acknowledge receipt of the notice for shipment A on April 25, 2024.","Jordan Lee acknowledged notice for shipment A on April 25","Support","ACME000057");
     await nav("Questions");await button("Discovery").click();await button("Record resolution").click();
     await form().getByLabel("Evidence that meets the closure test").selectOption({label:"Jordan Lee acknowledged notice for shipment A on April 25"});
@@ -156,6 +208,7 @@ async function pilot(root) {
     await nav("Questions");await button("Proof chart").click();
     await download("completed-review.html",()=>button("Save copy").click());
     await page.goto(pathToFileURL(join(root,"first/case/privilege_log.html")).href);
+    await expectReadableFields(page.locator('#log-entry input:not([type="checkbox"])'));
     await button("PRIV-001").click();await page.getByRole("textbox",{name:"Reviewed by"}).fill("Pilot counsel");
     await page.getByLabel("Counsel approved this metadata",{exact:false}).check();await button("Save entry").click();
     await page.locator('[data-field="participants"]').uncheck();

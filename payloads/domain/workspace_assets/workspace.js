@@ -3,10 +3,18 @@ const W = JSON.parse(document.getElementById("workspace-data").textContent);
 const e = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const sourceById = new Map(W.sources.map(s => [s.source_id, s]));
 const evidenceById = new Map(W.evidence.map(p => [p.evidence_id, p]));
+const eventBySource = new Map(W.temporal.events.flatMap(event => event.source_ids.map(id => [id, event])));
+const citationsBySource = new Map();
+for (const id of W.case_brief?.cited_ids || []) {
+  const source = evidenceById.get(id)?.source_id;
+  if (!sourceById.has(source)) continue;
+  if (!citationsBySource.has(source)) citationsBySource.set(source, []);
+  citationsBySource.get(source).push(id);
+}
 const nodeById = new Map(W.graph.nodes.map(n => [n.id, n]));
 const edgeById = new Map(W.graph.edges.map(r => [r.id, r]));
 const views = [...primaryNavigation.flatMap(group=>group.routes), "Matter settings"];
-const defaults = {view:"Overview", query:"", address:"", from:"", to:"", sourceIds:null, finding:null, source:null, sourceIsEvidence:false, graphSeed:"", graphTarget:"", graphPaths:false, graphMode:"case", mapSelection:"", mapEdge:"", mapFocus:"", mapQuery:"", reportId:"counsel-brief", explicit:true, limit:16, comparison:[], supportingOnly:false};
+const defaults = {view:"Overview", query:"", address:"", from:"", to:"", sourceIds:null, finding:null, issue:null, source:null, sourceIsEvidence:false, graphSeed:"", graphTarget:"", graphPaths:false, graphMode:"sources", mapSelection:"", mapEdge:"", mapFocus:"", mapQuery:"", mapTrace:false, mapHypotheses:false, mapLimit:32, reportId:"counsel-brief", documentPage:0, citedOnly:false, passagePage:0, passageQuery:"", explicit:true, limit:16, comparison:[], supportingOnly:false};
 let state = {...defaults, ...(W.saved_state || {})};
 let decisions = [...(W.decisions || [])];
 let savedViews = [...(W.saved_views || [])];
@@ -29,10 +37,17 @@ function visibleSources() {
   const allowedAddress = new Set(W.temporal.events.filter(x=>Object.values(x.fields.headers).flat().includes(state.address)).flatMap(x=>x.source_ids));
   return W.sources.filter(s => (!state.sourceIds || state.sourceIds.includes(s.source_id)) &&
     (!state.address || allowedAddress.has(s.source_id)) && (!(state.from||state.to) || allowedDates.has(s.source_id)) &&
-    (!state.query || (s.text ?? W.evidence.filter(p=>p.source_id===s.source_id).map(p=>p.text).join("\n")).toLocaleLowerCase().includes(state.query.toLocaleLowerCase()) || s.relative_path.toLocaleLowerCase().includes(state.query.toLocaleLowerCase())));
+    (!state.query || (s.text ?? W.evidence.filter(p=>p.source_id===s.source_id).map(p=>p.text).join("\n")).toLocaleLowerCase().includes(state.query.toLocaleLowerCase()) || s.relative_path.toLocaleLowerCase().includes(state.query.toLocaleLowerCase()) || documentTitle(s).toLocaleLowerCase().includes(state.query.toLocaleLowerCase())));
 }
 function visibleFindings() {const ids=new Set(visibleSources().map(s=>s.source_id)); return W.findings.filter(f=>!W.reading_review?.withheld_finding_ids.includes(f.id)&&f.supporting_evidence.concat(f.counter_evidence).some(id=>ids.has(evidenceById.get(id)?.source_id)));}
-function evidenceButtons(ids) {return ids.map(id=>{const p=evidenceById.get(id);return p?btn(sourceById.get(p.source_id)?.relative_path || p.source_id,"evidence",id,`class="source-link" title="${e(sourceById.get(p.source_id)?.relative_path||p.source_id)}"`):'<span>Citation unavailable—verification required</span>';}).join(" ") || '<p class="muted">No matching retained passage. Search coverage is limited.</p>';}
+function evidenceButtons(ids) {
+  return [...new Set(ids)].map(id => {
+    const p = evidenceById.get(id), source = sourceById.get(p?.source_id);
+    if (!source) return '<span>Citation unavailable—verification required</span>';
+    return btn(documentTitle(source), "evidence", id,
+      `class="source-link" title="${e(source.relative_path)} · characters ${e(p.start_offset)}–${e(p.end_offset)}"`);
+  }).join(" ") || '<p class="muted">No matching retained passage. Search coverage is limited.</p>';
+}
 function currentReview(f) {if(W.reading_review?.withheld_finding_ids.includes(f.id))return {...f,review_state:"Needs correction"};const items=f.review_history.concat(decisions.filter(d=>d.finding_id===f.id));const current=items.filter(d=>d.material_digest===f.material_digest);const byActor=new Map(current.map(d=>[d.actor,d]));const disagree=new Set([...byActor.values()].map(d=>JSON.stringify([d.action,d.text]))).size>1;const latest=items.at(-1);return latest?{...f,review_state:disagree?"Reviewers disagree":latest.material_digest===f.material_digest?latest.action:"Needs reassessment",reviewed_text:latest.text}:f;}
 function findingCard(original, full=false) {
   const f=currentReview(original), scoped=new Set(visibleSources().map(s=>s.source_id));
@@ -98,26 +113,45 @@ function chronology() {
 }
 function issues() {
   if(W.package_mode==="approved_excerpt_briefing")return `<h2>Questions</h2>${empty("Unreviewed questions are not included in this briefing.")}`;
-  return `<h2>Questions</h2>${W.casework?routeTabs(cwRoutes):""}<p class="muted">Counsel questions and proposed next steps.</p>
-    ${(W.counsel_issues||[]).map(q=>`<article class="card"><h3>${e(q.question)}</h3><small>Needs review</small><div class="actions">${evidenceButtons(q.supporting_evidence)}</div>${q.counter_evidence.length?`<h4>Counterevidence</h4>${evidenceButtons(q.counter_evidence)}`:""}<details><summary>Context and missing information</summary><p>${e(q.status)}</p><p>${e(q.legal_framework||"No legal framework supplied")}</p><small>${e(q.framework_basis)}</small>${q.unknowns.map(value=>`<p>${e(value)}</p>`).join("")}</details></article>`).join("")||empty("No counsel questions were supplied.")}
-    <section class="card"><h3>Next steps</h3>${nextSteps()||empty("No structured next steps were supplied.")}<small>Proposed review work; no collection or contact was performed.</small></section>
-    <h3>Missing information</h3>${W.gaps.length?table(["Question","Record and closure test","Inspect"],W.gaps.map(g=>[e(g.question),`${e(g.requested_record||"Record to be specified")}<details><summary>Why it matters</summary><p>${e(g.why_it_matters||g.priority_basis)}</p><p>${e(g.closure_condition)}</p><p>${e(g.owner)} · ${e(g.internal_target||"No target assigned")}</p></details>`,btn("View action draft","gap",g.id)])):empty("No evidence gaps were recorded.")}
-    <details><summary>Investigation questions (${W.issues.length})</summary>${table(["Question / draft assessment","Supporting sources","Counterevidence and alternatives","Missing information"],W.issues.map(h=>[`${e(h.question)}<p>${e(h.assessment)}</p>${pills(h.status)}`,evidenceButtons(h.supporting_evidence),`${evidenceButtons(h.contradictory_evidence)}${h.alternatives.map(a=>`<p>${e(a)}</p>`).join("")}`,h.gap_ids.map(id=>btn(W.gaps.find(g=>g.id===id)?.question,"gap",id)).join(" ")]))}</details>`;
+  const examined = W.issues.map(issueCard).join("");
+  const counsel = (W.counsel_issues || []).map(q => `<article class="card"><h3>${e(q.question)}</h3><p>${e(q.status)}</p>
+    ${q.supporting_evidence.length ? evidenceButtons(q.supporting_evidence) : ""}
+    ${q.counter_evidence.length ? `<h4>Contrary passages</h4>${evidenceButtons(q.counter_evidence)}` : ""}
+    <details><summary>Counsel’s instructions</summary><p>${e(q.legal_framework || "No legal framework supplied")}</p><small>${e(q.framework_basis)}</small>${q.unknowns.map(value=>`<p>${e(value)}</p>`).join("")}</details></article>`).join("");
+  const linked = new Set(W.issues.flatMap(q => q.gap_ids || []));
+  const otherGaps = W.gaps.filter(gap => !linked.has(gap.id)).map(gapCard).join("");
+  const tasks = nextSteps();
+  return `<h2>Questions</h2>${W.casework ? routeTabs(cwRoutes) : ""}
+    ${counsel && `<section><h3>Questions from counsel</h3>${counsel}</section>`}
+    ${examined && `<section><h3>Questions examined</h3>${examined}</section>`}
+    ${otherGaps && `<section><h3>Open evidence requests</h3>${otherGaps}</section>`}
+    ${tasks && `<section class="card"><h3>Proposed next steps</h3>${tasks}</section>`}
+    ${examined || counsel || otherGaps || tasks ? "" : empty("No questions were recorded in this review.")}`;
 }
 function comparisons() {
-  const options=W.evidence.map(p=>`<option value="${e(p.evidence_id)}">${e(sourceById.get(p.source_id)?.relative_path)} · ${p.start_offset}:${p.end_offset}</option>`).join("");
+  const options=W.evidence.map(p=>`<option value="${e(p.evidence_id)}">${e(documentTitle(sourceById.get(p.source_id)))} · ${p.start_offset}–${p.end_offset}</option>`).join("");
   return `<h2>Compare sources</h2><p>${btn("Back to documents","view","Evidence Explorer")}</p><div class="toolbar"><label>First source<select id="compare-a">${options}</select></label><label>Second source<select id="compare-b">${options}</select></label>${btn("Compare sources","compare-selected")}</div><div id="comparison-result">${state.comparison.length===2?comparisonPanels(...state.comparison):empty("Choose two source passages to compare.")}</div>`;
 }
 function comparisonPanels(a,b) {
-  const panels=[a,b].map(id=>{const p=evidenceById.get(id);return p?`<article class="card"><h3>${e(sourceById.get(p.source_id)?.relative_path)}</h3><blockquote>${e(p.text)}</blockquote><p>${btn("View source context","evidence",id)}</p><details><summary>Source details</summary><small>Generated normalized span ${p.start_offset}:${p.end_offset} · ${e(p.content_sha256)}</small></details></article>`:empty("Citation unavailable—verification required.");}).join("");
+  const panels=[a,b].map(id=>{const p=evidenceById.get(id);return p?`<article class="card"><h3>${e(documentTitle(sourceById.get(p.source_id)))}</h3><blockquote>${e(p.text)}</blockquote><p>${btn("View source context","evidence",id)}</p><details><summary>Source details</summary><small>${e(sourceById.get(p.source_id).relative_path)} · Characters ${p.start_offset}–${p.end_offset} · ${e(p.content_sha256)}</small></details></article>`:empty("Citation unavailable—verification required.");}).join("");
   return `<div class="compare-grid">${panels}</div><section class="card"><h3>Comparison requires review</h3><p>Check the same identity, material/version, relevant time, meaning of terms, surrounding context and innocent alternatives. No automated dishonesty or contradiction finding is asserted.</p><p>Exact byte identity: ${evidenceById.get(a)?.content_sha256===evidenceById.get(b)?.content_sha256?"Same normalized source bytes; originals still have separate integrity records":"Not established by these versions"}. Similar wording does not establish copying or transfer direction.</p></section>`;
 }
 function explorer() {
-  const sources=visibleSources(), events=W.temporal.events.filter(x=>x.source_ids.some(id=>sources.some(s=>s.source_id===id)));
+  const sources=visibleSources(), scopedIds=new Set(sources.map(s=>s.source_id));
+  const events=W.temporal.events.filter(x=>x.source_ids.some(id=>scopedIds.has(id)));
+  const cited=sources.filter(s=>citationsBySource.has(s.source_id));
+  const ordered=state.citedOnly ? cited : cited.concat(sources.filter(s=>!citationsBySource.has(s.source_id)));
+  const page=pageOf(ordered,state.documentPage,25);
+  const versions=new Set(cited.map(s=>s.content_sha256)).size;
   const periods=new Map();for(const x of events){const day=x.time.earliest?.slice(0,10)||"Date unresolved";const items=periods.get(day)||[];items.push(x);periods.set(day,items);}
   const distinct=items=>new Set(items.map(x=>x.metric_occurrence_id).filter(Boolean)).size;
   const pairs=new Map();for(const x of events){for(const sender of x.fields.headers.From){for(const field of ["To","Cc","Bcc"]){for(const recipient of x.fields.headers[field]){const key=JSON.stringify([sender,recipient,field]);const items=pairs.get(key)||[];items.push(x);pairs.set(key,items);}}}}
-  return `<div class="page-intro"><div><h2>Evidence</h2><p class="muted">${sources.length} of ${W.sources.length} documents</p></div>${W.evidence.length?btn("Compare sources","view","Comparisons"):""}</div><form id="document-search" class="document-search" role="search"><label>Search documents<input id="document-query" value="${e(state.query)}" placeholder="Search text or file name"></label><button type="submit">Search</button>${state.query||state.address||state.from||state.to||state.sourceIds?btn("Reset filters","reset"):""}</form>${documentList(sources)}
+  return `<div class="page-intro"><div><h2>Evidence</h2><p class="muted">${sources.length} of ${W.sources.length} documents${cited.length ? ` · ${cited.length} cited in this review` : ""}</p></div>${W.evidence.length?btn("Compare sources","view","Comparisons"):""}</div>
+    <form id="document-search" class="document-search" role="search"><label>Search documents<input id="document-query" value="${e(state.query)}" placeholder="Search title, text or file name"></label><button type="submit">Search</button>${state.query||state.address||state.from||state.to||state.sourceIds?btn("Reset filters","reset"):""}</form>
+    ${citationsBySource.size ? `<div class="report-tabs" role="group" aria-label="Evidence list">${btn("All documents","document-set","all",`aria-pressed="${!state.citedOnly}"`)}${btn("Cited documents","document-set","cited",`aria-pressed="${!!state.citedOnly}"`)}</div>` : ""}
+    ${cited.length && versions < cited.length ? `<p class="muted">${cited.length} cited documents contain ${versions} distinct texts. Copies are listed separately.</p>` : ""}
+    ${page.items.length || !state.citedOnly ? documentList(page.items) : empty("No cited documents match this view. Select All documents to search the collection.")}
+    ${pageControls(page,"document-page","documents")}
     ${W.package_mode==="approved_excerpt_briefing"?'<p>Communication analytics are not included in this excerpt-only briefing.</p>':`<details><summary>Communication measure and exact record sets</summary><p>${e(W.temporal.count_definition)}</p><p>Full authorized snapshot: ${W.temporal.message_count.count} distinct identified messages; ${W.temporal.source_record_count} source email records; ${W.temporal.message_count.unresolved_multiplicity.length} records with unresolved multiplicity. Pair-cell sums would double-count multi-recipient messages.</p>
     ${table(["Equal-length UTC day / event basis","Distinct identified messages / source records","Exact rows"],[...periods].sort().map(([day,items])=>[e(day),`${distinct(items)} messages / ${items.length} source records / ${items.filter(x=>!x.metric_occurrence_id).length} unresolved<span class="bar" style="width:${Math.max(2,distinct(items)/Math.max(1,distinct(events))*100)}%"></span>`,btn("Open counted records","period",day)]))}
     <h3>Directed sender–recipient table</h3><p>Each cell counts distinct Message-ID occurrences under the displayed recipient field. Multi-recipient messages contribute to multiple pairs; pair counts are not additive. Missing Bcc records do not establish absence.</p>${table(["Sender → recipient / field","Distinct messages / source records","Drill through"],[...pairs].map(([key,items])=>{const [sender,recipient,field]=JSON.parse(key);return [`${e(sender)} → ${e(recipient)}<br>${e(field)}`,`${distinct(items)} / ${items.length}`,btn("Open pair records","pair",key)];}))}</details>`}
@@ -138,39 +172,52 @@ function audit() {
 }
 function settings() {return `<h2>Matter settings</h2><section class="card"><h3>Saved views</h3>${btn("Save current view","save-view")}${savedViews.map((v,i)=>`<p>${btn(v.name,"open-view",String(i))} · Snapshot ${e(v.snapshot_id.slice(0,12))}</p>`).join("")||'<p>No saved view. Save a view, then save an investigation copy to retain it.</p>'}</section><section class="card"><h3>Execution, privacy and access</h3>${Object.values(W.privacy).map(s=>`<p>${e(s)}</p>`).join("")}<p>Scope: ${e(W.access_scope)}. Restrictions are applied before this webpage is generated. Browser filters do not change access rights.</p><p>Membrane: ${e(W.memory?.status || "Not attested")}. ${e(W.memory?.qualification || "")}</p></section><section class="card"><h3>Available scope and current limitations</h3>${Object.values(W.capabilities).map(s=>`<p>${e(s)}</p>`).join("")}</section>${W.sample?'<p class="warning">Synthetic EMC-2 sample; this is not a real matter.</p>':""}`;}
 let renderedState = "";
+let lastPage = {};
 function render() {
-  const focusedGraphNode=document.activeElement?.matches?.(".map-node")?document.activeElement.dataset.id:null;
-  const previousGraph=document.querySelector(".case-map");
   state.limit=Math.max(1,Math.min(49,Number(state.limit)||16));
+  if(state.view==="Case questions")state.view="Issues & evidence";
+  if(state.view==="People & relationships" && state.graphMode==="case") {
+    state.view="Case graph";
+    state.graphMode="sources";
+  }
+  if(state.view==="Case graph" && W.package_mode==="approved_excerpt_briefing")state.view="Overview";
   if(!views.includes(state.view))state.view="Overview";
   if(!reportUI)initializeReport();
   const ownerWork=!!W.casework && W.package_mode!=="approved_excerpt_briefing";
-  const workRoutes=ownerWork?{"Proof chart":cwProofView,"Case questions":cwQueryView,"Discovery tracker":cwTasksView,
+  const workRoutes=ownerWork?{"Proof chart":cwProofView,"Discovery tracker":cwTasksView,
     "Witness preparation":cwOutlinesView,"Identity review":cwIdentityView}:{};
-  if(!ownerWork&&["Proof chart","Case questions","Discovery tracker","Witness preparation","Identity review"].includes(state.view))state.view="Overview";
-  const {source,sourceIsEvidence,...pageState}=state;
+  if(!ownerWork&&["Proof chart","Discovery tracker","Witness preparation","Identity review"].includes(state.view))state.view="Overview";
+  const {source,sourceIsEvidence,mapSelection,mapEdge,mapTrace,...pageState}=state;
   const pageKey=JSON.stringify([pageState,decisions,savedViews,unsavedReviews,unsavedViews,copyRequested]);
   if(pageKey===renderedState) {
+    if(state.view==="Case graph")caseGraphSelection();
     if(state.source)openSource(state.source,state.sourceIsEvidence);
     else reportUI.setInspectorOpen(false);
     return;
   }
+  const graphControl = caseGraphPage && state.view === "Case graph" && document.activeElement?.closest(".case-graph-tools") && document.activeElement.id;
+  caseGraphPage?.dispose?.();
+  caseGraphPage=null;
   renderedState=pageKey;
   reportUI.setView(navigationGroup(state.view)?.routes[0]||"Matter settings");
-  document.getElementById("app").innerHTML=`<section class="scope" aria-label="Investigation scope"><details><summary>Filter investigation ${state.query||state.address||state.from||state.to||state.sourceIds?'· Active filters':""}</summary><div class="toolbar"><label>Search text<input id="query" value="${e(state.query)}" placeholder="Search documents"></label><label>Email address<input id="address" value="${e(state.address)}" placeholder="Sender or recipient"></label><label>From date (UTC)<input id="from" type="date" value="${e(state.from)}"></label><label>Through date (UTC)<input id="to" type="date" value="${e(state.to)}"></label>${btn("Apply filters","apply")}${btn("Reset filters","reset")}${btn(state.supportingOnly?"Restore counterevidence":"Supporting evidence only","toggle-support")}</div><small>Filters combine using AND. Address matches sender OR recipient. Unknown email dates are excluded by date filters. ${state.sourceIds?`${state.sourceIds.length} selected documents. `:""}Reports cover the full authorized snapshot.</small></details>${state.supportingOnly?'<p class="warning">Counterevidence is hidden. Restore it before creating a briefing.</p>':""}</section>
-<main id="content" tabindex="-1">${({...workRoutes,"Overview":overview,"Reports":reportsView,"Findings":findings,"People & relationships":graphView,"Chronology":chronology,"Issues & evidence":issues,"Comparisons":comparisons,"Evidence Explorer":explorer,"Work product":workProduct,"Since last review":changes,"Activity & audit":audit,"Matter settings":settings}[state.view])()}</main>${unsavedReminder()}`;
+  const hasFilter = state.query || state.address || state.from || state.to || state.sourceIds || state.supportingOnly;
+  const showFilters = ["Findings","Evidence Explorer","Chronology","People & relationships","Case graph","Work product"].includes(state.view);
+  const filters = `<section class="scope" aria-label="Investigation scope"><details><summary>Filter investigation ${hasFilter?'· Active filters':""}</summary><div class="toolbar"><label>Search text<input id="query" value="${e(state.query)}" placeholder="Search documents"></label><label>Email address<input id="address" value="${e(state.address)}" placeholder="Sender or recipient"></label><label>From date (UTC)<input id="from" type="date" value="${e(state.from)}"></label><label>Through date (UTC)<input id="to" type="date" value="${e(state.to)}"></label>${btn("Apply filters","apply")}${btn("Reset filters","reset")}${btn(state.supportingOnly?"Restore counterevidence":"Supporting evidence only","toggle-support")}</div><small>Filters combine using AND. Address matches sender OR recipient. Unknown email dates are excluded by date filters. ${state.sourceIds?`${state.sourceIds.length} selected documents. `:""}Reports cover the full authorized snapshot.</small></details>${state.supportingOnly?'<p class="warning">Counterevidence is hidden. Restore it before creating a briefing.</p>':""}</section>`;
+  document.getElementById("app").innerHTML=`${showFilters ? filters : ""}
+<main id="content" tabindex="-1">${({...workRoutes,"Overview":overview,"Reports":reportsView,"Findings":findings,"People & relationships":peopleView,"Case graph":caseGraphView,"Chronology":chronology,"Issues & evidence":issues,"Comparisons":comparisons,"Evidence Explorer":explorer,"Work product":workProduct,"Since last review":changes,"Activity & audit":audit,"Matter settings":settings}[state.view])()}</main>${unsavedReminder()}`;
   reportUI.enhance(document.getElementById("app"));
-  const graph=document.querySelector(".case-map");
-  if (graph && previousGraph?.dataset.mapView === graph.dataset.mapView && previousGraph.dataset.fit === graph.dataset.fit) {
-    graph.setAttribute("viewBox",previousGraph.getAttribute("viewBox"));
+  if (state.view==="Case graph") {
+    mountCaseGraph();
+    if (graphControl) (document.getElementById(graphControl) || document.getElementById("case-graph-query"))?.focus({preventScroll:true});
   }
-  if (previousGraph?.dataset.mapView === "preview" && graph?.dataset.mapView === "full") {
-    document.getElementById("case-graph-heading").focus();
-  } else if(focusedGraphNode) {
-    [...document.querySelectorAll(".map-node")].find(node=>node.dataset.id===focusedGraphNode)?.focus({preventScroll:true});
+  if (state.view==="Issues & evidence" && state.issue && (state.issue!==lastPage.issue || state.view!==lastPage.view)) {
+    document.getElementById("issue-"+state.issue)?.focus?.();
+  } else if (lastPage.view && (state.view!==lastPage.view || state.documentPage!==lastPage.documentPage || state.passagePage!==lastPage.passagePage)) {
+    window.scrollTo?.(0,0);
   }
+  lastPage=pageState;
   for(const [id,value] of [["graph-seed",state.graphSeed],["graph-target",state.graphTarget],["compare-a",state.comparison[0]],["compare-b",state.comparison[1]]]){const el=document.getElementById(id);if(el&&value)el.value=value;}
-  if(state.view==="People & relationships" && state.graphMode==="sources" && state.graphPaths)showPaths();
+  if(state.view==="People & relationships" && state.graphPaths)showPaths();
   if(state.source)openSource(state.source,state.sourceIsEvidence);
   else reportUI.setInspectorOpen(false);
 }
@@ -189,11 +236,20 @@ function openSource(id, isEvidence=false) {
   const original=source.original_included?`originals/${source.original_sha256}${source.media_type==="application/pdf"?".pdf":".bin"}`:null;
   const page=valid && (source.page_spans||[]).find(row=>row[1]<=p.start_offset&&row[2]>p.start_offset)?.[0];
 
-  const content=`<details><summary>Source details</summary><p>File name: ${e(source.relative_path)}</p><p>${e(source.source_id)} · ${e(cited)}</p><p>${e(source.extraction_status)} · ${e(source.review_state)}</p><p>Normalized SHA-256: ${e(source.content_sha256)}</p><p>Original hash verifies held bytes, not authenticity. ${e(source.locator_basis)}</p></details>
+  const passage=valid ? `<h3>Cited passage</h3><div class="source-excerpt" data-start="${p.start_offset}"><mark id="cited-span">${e(p.text)}</mark></div>
+    <details><summary>Read in context</summary><div class="source-text">${e(slice(0,p.start_offset))}<mark>${e(p.text)}</mark>${e(slice(p.end_offset))}</div></details>` :
+    `<h3>${text===null && p?"Cited excerpt":"Source text"}</h3><div class="source-text">${text===null?(p?e(p.text):"Normalized text unavailable; inspect the original."):p?"Citation unavailable—verification required.":e(text)}</div>`;
+  const content=`<p class="eyebrow">${e(documentType(source))} · ${e(cited)}</p>${passage}
+    <details><summary>Source details</summary><p>File name: ${e(source.relative_path)}</p><p>${e(source.source_id)}</p><p>${e(source.extraction_status)} · ${e(source.review_state)}</p><p>Normalized SHA-256: ${e(source.content_sha256)}</p><p>Original hash verifies held bytes, not authenticity. ${e(source.locator_basis)}</p></details>
     <div class="actions">${W.casework&&text!=null?btn("Capture fact","cw-capture",source.source_id):""}${original?`<a href="${e(original)}" ${source.media_type==="application/pdf"?'target="_blank" rel="noopener noreferrer"':`download="${e(source.relative_path.split("/").at(-1))}"`}>Open original</a>`:'<span>Original file not included in this package</span>'}${btn("Copy citation","copy-citation",p?p.evidence_id:source.source_id)}${p?btn("Compare sources","add-evidence-comparison",p.evidence_id):""}${btn("Flag extraction problem","flag-extraction",source.source_id)}</div>
-    ${original&&source.media_type==="application/pdf"?`<h3>Original PDF ${page?`· physical page ${page}`:""}</h3><iframe title="Original PDF" src="${e(original)}${page?`#page=${page}`:""}"></iframe><p>Extracted span highlighted below. Original page-region alignment is unavailable; verify the original page.</p>`:""}
-    <h3>${text===null?"Cited excerpt":"Source text"}</h3><div class="source-text">${text===null?(p?e(p.text):"Normalized text unavailable; inspect the original."):valid?`${e(slice(0,p.start_offset))}<mark id="cited-span">${e(p.text)}</mark>${e(slice(p.end_offset))}`:p?'Citation unavailable—verification required.':e(text)}</div>`;
-  reportUI.openInspector(source.relative_path,content);document.getElementById("source-dialog").querySelector("mark")?.scrollIntoView({block:"center"});
+    ${original&&source.media_type==="application/pdf"?`<h3>Original PDF ${page?`· physical page ${page}`:""}</h3><iframe title="Original PDF" src="${e(original)}${page?`#page=${page}`:""}"></iframe><p>Verify the extracted text against the original page.</p>`:""}`;
+  reportUI.openInspector(documentTitle(source),content);
+  const panel=document.getElementById("report-inspector");
+  if(panel)panel.scrollTop=0;
+  const context=document.querySelector("#source-dialog .source-text mark");
+  context?.closest("details")?.addEventListener("toggle",event=>{
+    if(event.currentTarget.open)context.scrollIntoView({block:"center"});
+  });
 }
 function reviewFinding(id) {
   const f=W.findings.find(f=>f.id===id);if(!f)return;
@@ -227,19 +283,24 @@ function briefing() {
     financial_review:{events:[],transactions:[],evidence:[],status:"Not included in reviewed excerpt briefing"},
     capabilities:{...W.capabilities,financial_scenarios:"Unreviewed arithmetic not included",legal_elements:"Counsel intake not included"},
     coverage:{source_ids:[...sourceIds],readable_ids:[],unreadable_ids:[],definition:"Authorized approved excerpts only; this package does not include originals or full search coverage"},
-    casework:null,case_query_index:null,casework_changed_sources:[],casework_import_note:null,reading_reports:[],reading_tasks:[],reading_copy:null,case_map:null,supervision:null,reading_review:{checks:[],withheld_finding_ids:[]},
+    casework:null,case_query_index:null,casework_changed_sources:[],casework_import_note:null,reading_reports:[],reading_tasks:[],reading_copy:null,case_map:null,case_brief:null,supervision:null,reading_review:{checks:[],withheld_finding_ids:[]},
     consistency:{status:"Not included in reviewed briefing",checks:[],withheld_finding_ids:[]},
     changes:{mode:"Frozen briefing; previous snapshots excluded",previous_snapshot:null,items:[]},decisions:[],saved_views:[],saved_state:{...defaults}};
   download("reviewed-briefing.html",pageFor(data),"text/html");document.getElementById("export-dialog").close();notice("Created a frozen briefing with reviewed findings and their supporting and contrary excerpts. Originals are excluded.");
 }
 async function performAction(action,id="",trigger) {
-  if(action==="view")goto({view:id,finding:null,source:null});
+  if(action==="view")goto({view:id,finding:null,issue:null,source:null});
   else if(action==="finding")goto({view:"Findings",finding:id||null});
+  else if(action==="issue")goto({view:"Issues & evidence",issue:id,source:null});
+  else if(action==="compare-passages")goto({view:"Comparisons",comparison:JSON.parse(id),source:null});
   else if(action==="evidence")goto({source:id,sourceIsEvidence:true});
   else if(action==="source")goto({source:id,sourceIsEvidence:false});
-  else if(action==="sources")goto({view:"Evidence Explorer"});
+  else if(action==="sources")goto({view:"Evidence Explorer",sourceIds:null,query:"",from:"",to:"",address:"",citedOnly:false,documentPage:0});
+  else if(action==="document-set")goto({citedOnly:id==="cited",documentPage:0});
+  else if(action==="document-page")goto({documentPage:Number(id)});
+  else if(action==="passage-page")goto({passagePage:Number(id)});
   else if(action==="readable"||action==="unreadable")goto({view:"Evidence Explorer",sourceIds:visibleSources().filter(s=>(s.text!==null)===(action==="readable")).map(s=>s.source_id)});
-  else if(action==="apply")goto({query:document.getElementById("query").value,address:document.getElementById("address").value.trim().toLowerCase(),from:document.getElementById("from").value,to:document.getElementById("to").value});
+  else if(action==="apply")goto({documentPage:0,query:document.getElementById("query").value,address:document.getElementById("address").value.trim().toLowerCase(),from:document.getElementById("from").value,to:document.getElementById("to").value});
   else if(action==="reset")goto({...defaults,view:state.view});
   else if(action==="toggle-support")goto({supportingOnly:!state.supportingOnly});
   else if(action==="graph-selection")goto({graphSeed:document.getElementById("graph-seed").value,graphTarget:document.getElementById("graph-target").value,graphPaths:false});
@@ -276,7 +337,20 @@ async function performAction(action,id="",trigger) {
   else if(action==="period"){const ids=W.temporal.events.filter(x=>(x.time.earliest?.slice(0,10)||"Date unresolved")===id).flatMap(x=>x.source_ids);goto({view:"Evidence Explorer",sourceIds:ids});}
   else if(action==="pair"){const [sender,recipient,field]=JSON.parse(id);const ids=W.temporal.events.filter(x=>x.fields.headers.From.includes(sender)&&x.fields.headers[field].includes(recipient)).flatMap(x=>x.source_ids);goto({view:"Evidence Explorer",sourceIds:ids});}
   else if(action==="finding-gaps")goto({view:"Issues & evidence"});
-  else if(action==="gap"){const g=W.gaps.find(x=>x.id===id);const content=`<h3>${e(reviewLabel(g.question))}</h3>${originalQuestion(g.question)}<p>${e(g.priority_basis)}</p><p>Requested record or interview: ${e(g.requested_record||"Specify record")}</p><p>Decision it informs: ${e(g.why_it_matters||"Requires attorney review")}</p><p>Proposed priority: ${e(g.priority||"Needs review")}</p><p>Closure condition: ${e(g.closure_condition)}</p><p>Owner: ${e(g.owner)} · Internal target: ${e(g.internal_target||"Not assigned")}</p><p>This draft does not send a request, contact anyone or change a collection.</p>${(g.available_source_ids||[]).filter(sourceId=>sourceById.has(sourceId)).map(sourceId=>btn(sourceById.get(sourceId).relative_path,"source",sourceId)).join(" ")}${g.source_evidence_ids.length?evidenceButtons(g.source_evidence_ids):""}${btn("Copy action draft","copy-gap",id)}`;reportUI.openInspector("Investigation action draft",content,trigger);}
+  else if(action==="gap"){
+    const g=W.gaps.find(x=>x.id===id);
+    if(!g){notice("This follow-up is unavailable in this copy.");return;}
+    const notes=[...new Set([g.why_it_matters,g.priority_basis].filter(Boolean))];
+    const content=`<h3>${e(reviewLabel(g.question))}</h3>${originalQuestion(g.question)}
+      <h4>Record to check</h4><p>${e(g.requested_record||"Record to be specified")}</p>
+      <h4>What would resolve it</h4><p>${e(g.closure_condition)}</p>
+      ${g.source_evidence_ids.length?`<h4>Cited records</h4><div class="actions">${evidenceButtons(g.source_evidence_ids)}</div>`:""}
+      ${(g.available_source_ids||[]).filter(s=>sourceById.has(s)).map(s=>btn(documentTitle(sourceById.get(s)),"source",s)).join(" ")}
+      <details><summary>Investigator notes and assignment</summary>${notes.map(n=>`<p>${e(n)}</p>`).join("")}
+      <p>Proposed priority · ${e(g.priority||"Needs review")}</p><p>${e(g.owner||"Unassigned")}${g.internal_target?" · "+e(g.internal_target):""}</p></details>
+      ${btn("Copy action draft","copy-gap",id)}`;
+    reportUI.openInspector("Proposed follow-up",content,trigger);
+  }
   else if(action==="copy-gap"){const g=W.gaps.find(x=>x.id===id);await copy(`Investigation draft: ${g.question}\nRationale: ${g.priority_basis}\nClosure: ${g.closure_condition}\nSnapshot: ${W.snapshot_id}\nEvidence: ${g.source_evidence_ids.join(", ")}\nRecord/interview: ${g.requested_record||"Specify record"}\nDecision: ${g.why_it_matters||"Requires review"}\nOwner: ${g.owner}\nInternal target: ${g.internal_target||"Not assigned"}`);}
   else if(action==="copy-citation"){const p=evidenceById.get(id),s=sourceById.get(p?p.source_id:id);await copy(`${s.source_id} · normalized SHA-256 ${s.content_sha256}${p?` · generated character span ${p.start_offset}:${p.end_offset}\n${p.text}`:""}`);}
   else if(action==="flag-extraction"){notice("Extraction problem draft prepared. Export this note for the co-worker; originals remain unchanged.");download("extraction-problem.json",JSON.stringify({snapshot_id:W.snapshot_id,source_id:id,action:"Verify extraction against original",status:"Draft for review"},null,2),"application/json");}

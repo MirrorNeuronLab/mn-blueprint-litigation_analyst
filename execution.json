@@ -31,13 +31,17 @@
         "steps": [
           "prepare_case_sources",
           "build_case_indexes",
+          "scope_case_review",
+          "draft_case_questions",
+          "review_case_questions",
+          "investigate_case_evidence",
           "write_review_draft",
           "plan_litigation_round",
           "collect_litigation_evidence",
+          "check_counterevidence",
           "assess_litigation_hypothesis",
           "review_litigation_finding",
-          "summarize_litigation_round",
-          "investigate_case_evidence"
+          "summarize_litigation_round"
         ],
         "uses": "mn-agents.worker.python_docker@1",
         "with": {

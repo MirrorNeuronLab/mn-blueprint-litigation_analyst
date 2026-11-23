@@ -7,16 +7,15 @@ from .temporal_evidence import project
 from .matter_intake import load as load_matter
 from .gap_work import project as project_gaps, classify
 from .review_scope import limits
+from .handling import permitted_sources
+
+CASE_QUESTION_GUIDANCE = "Ask questions about this matter in co-worker Chat. Open the cited records in Evidence."
 
 
 def build(context, documents, evidence, state, inventory, *, goal):
     settings = context.config.get("workspace", {})
     matter = load_matter(context.store.run_dir)
-    requested = settings.get("authorized_source_ids")
-    all_ids = {d.source_id for d in documents}
-    if requested is not None and (not isinstance(requested, list) or not set(requested) <= all_ids):
-        raise ValueError("workspace.authorized_source_ids must name sources in the frozen matter")
-    allowed = all_ids if requested is None else set(requested)
+    allowed = permitted_sources(settings, documents)
     flagged = set(state["data"].get("source_review_flags", {}))
     # A mailbox original may contain excluded records. Never expose the container
     # when even one member is restricted, including potential privileged material.
@@ -52,19 +51,23 @@ def build(context, documents, evidence, state, inventory, *, goal):
     hypotheses, gaps, findings = [], {}, []
     raw_hypotheses = state["data"].get("hypotheses", {})
     accepted = set(state["data"].get("report_review", {}).get("accepted_ids", []))
+    question_ids = {}
     for h in raw_hypotheses.values():
         ids = h["supporting_evidence"] + h["contradictory_evidence"]
         # Do not publish a conclusion whose basis depends on inaccessible evidence.
         if not set(ids) <= set(spans):
             continue
         question_id = "Q-" + fingerprint(h["question"].casefold())[:16]
-        item = {**h, "id": question_id, "origin": "Model enquiry", "mode": "Investigation question",
+        question_ids[h["id"]] = question_id
+        item = {**h, "id": question_id, "origin": h.get("origin", "Model enquiry"), "mode": "Investigation question",
             "definition": "Factual enquiry; no counsel-defined legal test supplied", "gap_ids": []}
         for gap in project_gaps(question_id, h, spans, matter["gap_assignments"]):
             gap = classify(gap, documents)
             item["gap_ids"].append(gap["id"])
             gaps[gap["id"]] = gap
         hypotheses.append(item)
+    for item in hypotheses:
+        item["parent_id"] = question_ids.get(item.get("parent_id"))
     by_hypothesis = {h["question"]: h for h in hypotheses}
     for f in state["data"].get("report_draft", {}).get("findings", []):
         if f["id"] not in accepted or not set(f["evidence_ids"]) <= set(spans):
@@ -122,7 +125,7 @@ def build(context, documents, evidence, state, inventory, *, goal):
             "export": "Copies cannot be revoked; recipient authorization must be confirmed"},
         "capabilities": {"financial_scenarios": "Unavailable: reviewed source inputs and methodology not supplied",
             "legal_elements": "Unavailable: counsel-defined framework not supplied",
-            "case_qa": "Use the co-worker chat for Membrane-backed questions; webpage search is a literal record filter",
+            "case_qa": CASE_QUESTION_GUIDANCE,
             "identity_corrections": "Person identity is unresolved; address nodes are never silently merged"}}
 
     from .review_products import attach

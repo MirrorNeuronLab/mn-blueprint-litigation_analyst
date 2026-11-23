@@ -8,7 +8,7 @@
     "benefit": "Review disputed questions with source-backed support, counterevidence, transaction reconciliation and specific next evidence requests.",
     "input": "Legal sources, an investigation goal and optional counsel matter intake with issues, exclusions and source-cited transaction records.",
     "output": "A draft for human review, source inventory, searchable evidence records, and an index of findings.",
-    "how_it_works": "Preserves a copy of the sources, searches for relevant evidence, investigates possible explanations, checks cited findings independently, and prepares a draft.",
-    "target_users": "Litigation attorneys reviewing a case."
+    "how_it_works": "Review and edit the proposed questions in Chat. The co-worker checks each question against supporting and contrary records, explains new leads as it follows them, and delivers a draft with links to the evidence.",
+    "target_users": "Law firms and individuals organizing case records for legal review."
   }
 }

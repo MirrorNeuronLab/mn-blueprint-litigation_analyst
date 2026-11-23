@@ -1,9 +1,66 @@
 # Litigation Analyst specification
 
+## Question planning and execution (6.0)
+
+The Plan stage freezes the source inventory, indexes and handling scope, then
+drafts neutral questions from authorized records. Its Core input request shows
+the numbered proposal and an editable list. The supervisor can revise, remove,
+reorder or add questions. An explicit **Start investigation** receipt binds
+the final wording to the run. Cancellation or an empty permitted corpus ends
+the investigation before any evidence task. The evidence time allowance starts
+after the review. A pending review expires after 24 hours.
+
+The Execute stage preserves each question's wording and origin. Parallel
+question branches collect source passages and independently search for contrary
+records. Assessment follows collection. Independent review joins the assessment
+and the counter-search. The round summary waits for every review. Later rounds
+may re-search an existing question or open a new one tied to an earlier review.
+Each new question publishes a nonblocking, replay-safe Chat notice with the
+reason and parent question. The report links answers to passages and follow-ups
+to their visible parents. Replanning keeps the frozen scope and configured limits.
+
+## Case summary and cited records (5.7)
+
+The common offline report shell opens with the result of the review, current
+findings, available transaction records, and up to three exhibits from different
+normalized source texts. Select complete excerpts from verified citations to
+the handoff, findings, examined questions or follow-up work. Include contrary
+citations in exhibit selection. A long passage opens at its exact citation.
+The document register retains each authorized copy and distinguishes document
+count from distinct text count. An inconclusive enquiry can supply passages
+and proposed work. Only retained findings enter the draft findings section.
+
+The reading brief includes examined questions, available evidence and measured
+coverage. The source sheet opens on the cited text and discloses full context
+and file identity. The passage appendix and document register support bounded
+pages. New case questions and refinements belong in co-worker Chat. The report
+shows the questions already examined and lets readers inspect the cited records
+and their connections. Bookmarks for the former question form open issue review.
+The reviewed excerpt export excludes the owner’s case summary.
+
+## Incomplete evidence support (5.6.1)
+
+Bind each matched or partial communication path to the ordered, distinct
+passage IDs of all its edges. Recover an older path's missing ID list only when
+every edge reference matches a cleared ledger passage and the full list matches
+a complete support group. Only matched paths enter model exhibits. Keep partial
+and rejected chronology in their original audit categories.
+
+Omit an unverified graph exhibit and record the coverage limitation. Withhold
+passages with unresolved source dependencies, including connected qualifications.
+If an independent search reveals incomplete support for a citation, withhold
+the finding, record the reason, and continue the investigation. Frozen source
+integrity and access checks still apply.
+
+Publish page locations as JSON arrays in original-source provenance. Repeating
+intake on the same Job must reopen the same immutable source revision when its
+bytes, provenance and access match, including previously published originals.
+
 ## Adaptive review and Membrane search reuse (5.6)
 
-The default adaptive profile uses structural indexing and the existing limits
-of three rounds, two enquiries per round and sixteen investigation decisions.
+The adaptive profile uses structural indexing and runs up to three rounds.
+The default plan suggests up to two questions, accepts up to eight reviewed
+questions, and permits up to two questions in each follow-up round.
 The reviewer records the disposition of the proposed finding, the supporting
 and contrary searches, the independent search, and a follow-up route. Replanning
 uses the latest reviewed revision of each enquiry. A withheld finding, conflicting
@@ -70,16 +127,12 @@ Publication extends the DuckDB graph with proof elements, facts, their
 supporting, contrary and contextual links, and confirmed identity links.
 `review_units` and `review_dates` index authorized text, including sources
 without a selected finding. `graph_citations` joins relationships to exact
-passages. Bounded search in the standalone HTML reads a projection selected by
-DuckDB from that same snapshot. Round-robin selection across sources retains
-up to 24,000 passages and 16,000 cited relationships. Search displays its
-coverage, limits the visible results to 60, groups duplicates by source hash
-and offsets, and includes the open page's cited reviews. Named date cutoffs
-require a single known day. Date refinements compare record dates, disclose
-unknown or overlapping intervals, and link to the evidence for a named cutoff.
-The report stores up to eight turns in each saved question. The direct CLI
-queries the verified database. Completed-run Chat retrieves published passages
-and the bounded graph appendix through Membrane.
+passages. The standalone report uses the authorized snapshot for document
+lookup, chronology and citation review. The direct CLI queries the verified
+database. Completed-run Chat retrieves published passages and the bounded
+graph appendix through Membrane. Follow-up questions use the referenced set
+of records and cite the evidence for a date cutoff or identity when available.
+Older review packets can still carry their saved question text.
 
 Witness preparation joins a witness's cited statement, an exhibit and a proof
 element. Counsel can edit the neutral question and record a disposition.
@@ -133,10 +186,16 @@ header addressing, shared source, transaction reference, issue coverage, and
 supporting or contrary citation roles. An explicitly contrary citation stays
 contrary if the draft also includes it in its general citation list. Handling
 restrictions and consistency decisions apply before projection. The database
-includes the authorized inventory and recorded relationships. The report
-projects up to 60 email records, 20 addresses per header field, and 60 financial
-records. Its network includes a neighbor view, connection-level evidence, and a table.
-Draft assessment, counsel annotation, and recorded source structure remain distinct.
+includes the authorized inventory and recorded relationships. The owner report
+has a dedicated case graph rooted in the review objective. Question and hypothesis
+links describe the investigation. Each supporting, contrary or attribution link
+opens its exact passage in the current scope. Group matching normalized document
+versions by media type and text hash while retaining every cited copy and locator.
+Keep mailbox identities, counsel-attributed witnesses and confirmed aliases distinct.
+Render up to 32 items initially and up to 160 on request. Search the full in-scope
+model before limiting the display and preserve a path from each result to the goal.
+Provide a keyboard-accessible index and connections list equivalent to the diagram.
+Keep the standalone report usable offline and omit the graph from approved excerpt briefings.
 
 The blueprint's `ask_case.py` maps supported everyday questions to fixed,
 parameterized, read-only DuckDB queries. Bounded path lookup uses Graph Analysis
@@ -229,11 +288,11 @@ archive. The existing SDK >=1.4.1.dev15 requirement remains.
 
 ## Version 3.3.1 navigation and disclosure
 
-Expose eight primary task groups: Overview, Findings, Questions, Evidence,
-People & events, Timeline, Reports and Review history. Preserve the original route
-strings and saved-state contract; use explicit presentation grouping for comparison,
-briefing and change/audit routes. Keep Matter settings secondary. Do not change
-source authorization, review digests, human decisions or briefing eligibility.
+Show Overview, Case graph, Findings, Questions, Evidence, People & events, Timeline,
+Reports, Review history and Matter settings in the wide sidebar. The compact
+navigation places secondary destinations under More views and exposes the selected
+destination on resize. Route earlier case-map bookmarks to Case graph. Preserve the
+routes for source relationships, comparison, briefing, changes and audit.
 
 Overview presents the existing record summary before counts. Findings exposes
 withheld claims as correction work, never eligible briefing material. Evidence
@@ -264,13 +323,12 @@ correction work and exclude them from reading findings and briefing eligibility.
 No new finding or human approval is synthesized. The reading brief supplies
 amount distinctions, accounting net qualifications and record-based review tasks.
 
-Graph nodes describe distinct observed email addresses with header display names,
-communication source records, annotated financial records and recorded transaction
-references. Edges have exact source support; shared-source and header links do not
-infer participation, causation, knowledge, payment or real-person identity.
-Unknown dates stay unresolved. Cap projected communications/financial records at
-60 each and addresses per header field at 20; cap displayed links at 49/nodes at
-60, disclose truncation, and provide an equivalent connection table.
+The source-relationship projection records separate address identities, message
+records, annotated financial records and transaction references. The stored
+case-map excerpt bounds communication and financial records at 60 each and
+addresses at 20 per header field. The dedicated case graph uses the questions and
+their authorized cited source versions, including records beyond that excerpt.
+Unknown dates stay unresolved.
 
 Markdown rendering supports headings, tables, blockquotes, lists and code with
 inert HTML and allowlisted evidence drill-throughs. Reading reports cover the
@@ -364,16 +422,15 @@ is migrated or silently re-investigated.
 The product accepts an optional legal-document folder and neutral goal. Omission
 or a blank setup value selects the pinned public EMC-2 synthetic sample; invalid
 custom inputs fail.
-Four fixed phases prepare sources, verify document/graph indexes, investigate,
-and publish a draft. The investigation parent initializes context; its child
-planner commits enquiries using only declared templates. Core alone admits and
+The parent workflow inventories sources, indexes them, checks scope, drafts
+questions, collects the reviewed list, investigates and publishes the draft.
+The child planner schedules the reviewed enquiries using declared templates. Core admits and
 executes the graph and releases the parent output after the final stop plan.
 
 The LLM selects enquiries, evidence searches, optional admitted graph views, assessments
 and acceptance decisions. Workers execute committed tasks deterministically;
-replanning occurs between completed rounds. Up to two enquiries per round and
-three rounds produce at most seven steps per round. Evidence, assessment and
-independent review workers run serially to avoid competing SQLite mutations.
+replanning occurs between completed rounds. Each scheduled question contributes
+four tasks. An eight-question opening round has 33 tasks including the summary.
 Unchanged repeated enquiry work, or an empty execute proposal after a completed
 round, stops with an explicit coverage limitation.
 Model/validation/tool failures fail the workflow, not a simulated successful
@@ -665,8 +722,9 @@ remote-model report or factual-accuracy result is claimed from that attempt.
 
 ## Version 3.1: counsel-directed first review
 
-The optional `review.profile=first_pass` performs one round (up to two enquiries),
-uses observed structural relationships, and limits investigation decisions to six.
+The optional `review.profile=first_pass` performs one round on the reviewed
+questions and uses observed structural relationships. Its default decision
+ceiling is 18 with capacity for eight reviewed questions.
 A separate harmless readiness decision checks the selected model before source
 acquisition or case inference. It sends no case material, preserves the configured
 provider, and fails with `case/model_preflight.json` when the readiness request cannot
@@ -682,8 +740,8 @@ still applies; this release does not change the SDK or runtime.
 First-pass planning checks a 600-second allowance between rounds; it does not
 interrupt in-flight work, cap total wall time, or promise a dollar cost. Provider
 transport/repair attempts are separate from decision counts. `standard` permits up
-to three rounds and sixteen investigation decisions, with configured relationship
-extraction (up to 256 separate calls). Retrieval is ranked, not exhaustive. Every
+to three rounds and 28 investigation decisions with the default question limit.
+Configured relationship extraction may use up to 256 separate calls. Retrieval is ranked, not exhaustive. Every
 report/workspace discloses the effective plan and unexamined counsel questions.
 
 Optional `inputs.payload.matter_file` accepts the bounded JSON contract in
@@ -805,7 +863,7 @@ execution, external sharing, runtime changes or approval authority.
 
 All parent phases and child templates bind directly to the SDK block worker and
 native domain functions. No blueprint capability adapters, runtime-context
-factory or old handler bridge remains. Core owns the serial child DAG, task
+factory or old handler bridge remains. Core owns the child DAG, task
 identity, delivery and round limits. Legal evidence selection, handling policy,
 counter-search, acceptance, financial reconciliation and report content remain
 domain responsibilities. The autonomous explorer is preserved as an unregistered

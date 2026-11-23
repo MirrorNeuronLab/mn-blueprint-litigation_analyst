@@ -1,13 +1,14 @@
 "use strict";
-const cwRoutes=[["Proof chart","Proof chart"],["Ask the graph","Case questions"],["Discovery","Discovery tracker"]];
+const cwRoutes=[["Issue review","Issues & evidence"],["Proof chart","Proof chart"],["Discovery","Discovery tracker"]];
 function cwOptions(items, selected){
   return items.map(([value,label])=>`<option value="${e(value)}" ${value===selected?"selected":""}>${e(label)}</option>`).join("");
 }
 function cwField(label,name,options={}) {
-  const {value="", choices, area, type="text",optional=false,max=500}=options;
+  const {value="", choices, emptyLabel="No options available", area, type="text",optional=false,max=500}=options;
   const attrs=`name="${e(name)}" aria-label="${e(label)}" ${optional?"":"required"}`;
   let input;
-  if(choices)input=`<select ${attrs}>${cwOptions(choices,value)}</select>`;
+  if(choices?.length===0)input=`<select ${attrs} disabled><option value="">${e(emptyLabel)}</option></select>`;
+  else if(choices)input=`<select ${attrs}>${cwOptions(choices,value)}</select>`;
   else if(area)input=`<textarea ${attrs} maxlength="${max}">${e(value)}</textarea>`;
   else input=`<input ${attrs} type="${type}" maxlength="${max}" value="${e(value)}">`;
   return `<label>${e(label)}${input}</label>`;
@@ -86,11 +87,15 @@ function cwOutlinesView(){
   const witness=cwWitness||witnesses[0]||"", issue=cwIssue||book.elements[0]?.id||"";
   const impacted=cwImpacts().byElement.get(issue);
   const rows=book.outlines.filter(o=>o.element===issue && o.witness===witness);
-  return `<section class="cw-section"><h2>Witness preparation</h2>${routeTabs([["Case graph","People & relationships"],["Witness preparation","Witness preparation"],["Identities","Identity review"]])}
-    <form id="cw-witness-filter" class="cw-form">${cwField("Witness","witness",{choices:cwChoices(witnesses),value:witness})}
-    ${cwField("Proof element","element",{choices:cwElements(),value:issue})}<button>Choose witness and issue</button></form>
+  const canChoose=witnesses.length>0 && book.elements.length>0;
+  let emptyMessage="Select a witness and issue with a cited statement and comparison exhibit.";
+  if(!book.elements.length)emptyMessage="Start by adding a proof element in the proof chart.";
+  else if(!witnesses.length)emptyMessage="Open a source in Evidence and capture a statement with the witness’s name.";
+  return `<section class="cw-section"><h2>Witness preparation</h2>${peopleTabs()}
+    <form id="cw-witness-filter" class="cw-form">${cwField("Witness","witness",{choices:cwChoices(witnesses),value:witness,emptyLabel:"No witnesses recorded"})}
+    ${cwField("Proof element","element",{choices:book.elements.length?cwElements():[],value:issue,emptyLabel:"No proof elements defined"})}<button ${canChoose?"":"disabled"}>Choose witness and issue</button></form>
     <div class="actions">${btn("Add comparison question","cw-add-outline",issue,witness&&issue?'':'disabled') } ${rows.length?btn("Download editable outline","cw-outline-word",issue):""}</div>
-    ${rows.map(o=>cwRow(o.question,`<div class="cw-split"><div><h4>Witness statement</h4>${cwFactRow(cwFact(o.statement))}</div><div><h4>Comparison exhibit</h4>${cwFactRow(cwFact(o.exhibit))}</div></div><p>${e(o.resolution||"Discrepancy awaiting review")}</p>${cwOutlineNeedsReview(o,impacted)?"<p>Recheck this question against the current evidence and attribution.</p>":""}${btn("Edit question or resolution","cw-edit-outline",o.id)}`)).join("")||empty("Select a witness and issue with a cited statement and comparison exhibit.")}</section>`;
+    ${rows.map(o=>cwRow(o.question,`<div class="cw-split"><div><h4>Witness statement</h4>${cwFactRow(cwFact(o.statement))}</div><div><h4>Comparison exhibit</h4>${cwFactRow(cwFact(o.exhibit))}</div></div><p>${e(o.resolution||"Discrepancy awaiting review")}</p>${cwOutlineNeedsReview(o,impacted)?"<p>Recheck this question against the current evidence and attribution.</p>":""}${btn("Edit question or resolution","cw-edit-outline",o.id)}`)).join("")||empty(emptyMessage)}</section>`;
 }
 function cwOutlineEditor(id,el){
   const o=cwBook().outlines.find(row=>row.id===id)||{}, issue=o.element||el, witness=o.witness||cwWitness||cwWitnesses()[0]||"";
@@ -104,7 +109,7 @@ function cwOutlineEditor(id,el){
 }
 function cwIdentityView(){
   const aliases=cwAliases();
-  return `<section class="cw-section"><h2>Identity review</h2>${routeTabs([["Case graph","People & relationships"],["Witness preparation","Witness preparation"],["Identities","Identity review"]])}
+  return `<section class="cw-section"><h2>Identity review</h2>${peopleTabs()}
     <p>Confirm an identity from a cited passage. Shared mailboxes and namesakes keep their original records.</p>${btn("Review an alias","cw-add-alias")}
     ${cwBook().aliases.map(a=>cwRow(a.alias+" → "+a.person,`<p>${e(a.actor)} · ${e(a.at)} · ${a.reverses?"Reversal":aliases.some(x=>x.id===a.id)?"Confirmed":"Inactive"}</p>
        ${cwButton(a.fact)} ${aliases.some(x=>x.id===a.id)?btn("Reverse link","cw-reverse-alias",a.id):""}`)).join("")}

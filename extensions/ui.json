@@ -59,7 +59,7 @@
       {
         "path": "review.profile",
         "label": "Review scope",
-        "description": "Adaptive review follows gaps and conflicting evidence for up to three rounds. First pass runs once. Standard review also uses the configured relationship extraction.",
+        "description": "Review your questions in Chat before execution. Adaptive review follows new leads for up to three rounds. First pass checks the list once. Standard review also uses the configured relationship extraction.",
         "type": "select",
         "choices": [
           {
@@ -99,7 +99,7 @@
       {
         "path": "inputs.payload.review_file",
         "label": "Previous review decisions",
-        "description": "Carry forward reviewed facts, witness questions, discovery tasks and saved graph questions from this matter. Use the review-decisions.json exported by the previous report.",
+        "description": "Carry forward reviewed facts, witness questions and discovery tasks from this matter. Use the review-decisions.json exported by the previous report.",
         "type": "local_path",
         "path_kind": "file",
         "role": "input",
@@ -118,7 +118,7 @@
     "prompt_file": "@/payloads/prompts/setup.md",
     "run_guidance": {
       "on_start": "I’ll index the selected documents so the draft can link each finding to its sources and show conflicting evidence.",
-      "web_ui_ready": "Open Full report to ask the case graph a question, follow the cited passages and check gaps in the proof chart.",
+      "web_ui_ready": "Open Full report to read the case summary, inspect cited passages and check gaps in the proof chart. Ask follow-up questions in Chat.",
       "report_ready": "Expand the run summary and read Your next review to see which question needs counsel’s attention.",
       "output_ready": "Open final_report.md in the output folder and start with the next review question for counsel."
     }

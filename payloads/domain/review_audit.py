@@ -17,6 +17,8 @@ def attach(workspace, context, documents):
                 'model_dispatched':dispatched,
                 'admitted_source_ids':[s for s in coverage.get('admitted_source_ids', []) if s in allowed and dispatched],
                 'complete_source_ids':[s for s in coverage.get('complete_source_ids', []) if s in allowed and dispatched]})
+            if coverage.get('unverified_support') and context.config.get('workspace', {}).get('authorized_source_ids') is None:
+                rows[-1]['incomplete_evidence_support'] = True
     assessed = sorted({s for r in rows if r['stage']=='assessment' for s in r['admitted_source_ids']})
     reviewed = sorted({s for r in rows if r['stage']=='review' for s in r['admitted_source_ids']})
     workspace['coverage'].update({'model_packets':rows, 'assessor_source_ids':assessed,

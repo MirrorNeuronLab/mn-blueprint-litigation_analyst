@@ -1,9 +1,9 @@
 .cw-section { margin-block: 1rem; }
 .cw-section h3, .cw-form h3 { margin-block: .3rem .65rem; }
-.cw-form { display:grid; gap:.75rem; max-width:52rem; padding-block:.65rem; }
+.cw-form { display:grid; grid-template-columns:minmax(0, 1fr); gap:.75rem; max-width:52rem; padding-block:.65rem; }
 .cw-form label, #log fieldset label { display:grid; gap:.28rem; font-weight:550; }
 .cw-form textarea { min-height:4.5rem; resize:vertical; }
-.cw-form input:not([type=checkbox]), .cw-form textarea, .cw-form select { box-sizing:border-box; width:100%; min-width:0; padding:.5rem; color:inherit; background:var(--background,white); border:1px solid var(--border,#a6b4ba); border-radius:.3rem; font:inherit; }
+.cw-form :where(input:not([type=checkbox]), textarea, select) { width:100%; }
 .cw-form label:has(input[type=checkbox]), #log fieldset label { display:flex; align-items:center; gap:.5rem; }
 .cw-form button { justify-self:start; }
 .cw-row { padding:.65rem 0; border-bottom:1px solid var(--border,#d6dfe1); overflow-wrap:anywhere; }

@@ -21,11 +21,19 @@ def limits(config):
         raise ValueError("Unknown litigation review objective")
     settings = config["dynamic_investigation"]
     first = profile == "first_pass"
+    batch_size = settings["hypotheses_per_round"]
+    plan_size = settings.get("max_review_questions", batch_size)
+    # The first round can include questions added by the reviewer. Later rounds
+    # retain their normal batch size and independent review for each answer.
+    ceiling = min(config["investigation"]["max_model_decisions"], config["context_memory"]["policy"]["max_calls"],
+                  (6 if first else 16) + 2 * max(0, plan_size - batch_size))
+    # Reserve one drafting decision, one search design for edits, and two decisions per answer.
+    available = min(plan_size, max(0, (ceiling - 2) // 2))
     return {"profile": profile, "objective": objective,
             "max_rounds": min(settings["max_rounds"], 1 if first else 3),
-            "hypotheses_per_round": settings["hypotheses_per_round"],
+            "hypotheses_per_round": min(batch_size, available), "max_review_questions": available,
             "seconds": min(config["investigation"]["max_investigation_seconds"], 600 if first else 99999),
-            "max_decisions": min(config["investigation"]["max_model_decisions"], 6 if first else 16),
+            "max_decisions": ceiling,
             "relationship_mode": config["source_relationships"]["mode"] if profile == "standard" else "structural",
             "relationship_call_ceiling": config["source_relationships"]["max_calls"] if profile == "standard" else 0,
             "definition": "Decision ceilings exclude provider transport/repair attempts; elapsed limits are checked at planning boundaries. Ranked retrieval is not exhaustive."}

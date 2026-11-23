@@ -1,6 +1,6 @@
 "use strict";
 const cwSourceCache = new Map();
-let cwIndex, cwReturnScope, cwConversation = [], cwAnswer = null, cwPendingAnchor, cwWitness = "", cwIssue = "";
+let cwIndex, cwPendingAnchor, cwWitness = "", cwIssue = "";
 const cwBook = () => W.casework;
 const cwFact = id => cwBook().facts.find(f=>f.id===id);
 const cwElement = id => cwBook().elements.find(el=>el.id===id);
@@ -47,14 +47,13 @@ function cwAnchor(source,start,end) {
 function cwIndexData() {
   if(cwIndex)return cwIndex;
   const data=W.case_query_index;
-  const units=new Map(), sourceDates=new Map(), datesByUnit=new Map(), linksBySource=new Map();
+  const units=new Map(), sourceDates=new Map();
   const add=(map,key,value)=>{if(!map.has(key))map.set(key,[]);map.get(key).push(value);};
   for(const [id,sid,start,end] of data.units){
     const s=sourceById.get(sid);
     if(s?.text!=null && start>=0 && end<=cwOffsets(s).length && end>start)units.set(id,{id,sid,start,end});
   }
   for(const row of data.dates)if(units.has(row.unit_id)){
-    add(datesByUnit,row.unit_id,row);
     if(["Record date","Testimony given","Signed"].includes(row.meaning))
       add(sourceDates,units.get(row.unit_id).sid,row);
   }
@@ -63,11 +62,7 @@ function cwIndexData() {
   }
   for(const ev of W.financial_review?.events||[])if(ev.event_date && !sourceDates.has(ev.source_id) && /record date/i.test(ev.date_basis||""))
     add(sourceDates,ev.source_id,{earliest:ev.event_date,latest:ev.event_date,meaning:ev.date_basis});
-  for(const row of data.links){
-    const p=evidenceById.get(row.passage_id);
-    if(p)add(linksBySource,p.source_id,row);
-  }
-  cwIndex={units,sourceDates,datesByUnit,linksBySource};
+  cwIndex={units,sourceDates};
   return cwIndex;
 }
 function cwUnitAnchor(unit){
@@ -82,14 +77,15 @@ function cwRead(id){
 }
 function cwGetSelection(){
   const s=sourceById.get(evidenceById.get(state.source)?.source_id||state.source);
-  const root=document.querySelector("#source-dialog .source-text");
-  if(!s||s.text==null||!root)return null;
+  if(!s||s.text==null)return null;
   const sel=window.getSelection();
   if(sel.rangeCount && !sel.isCollapsed){
     const range=sel.getRangeAt(0);
-    if(!root.contains(range.startContainer)||!root.contains(range.endContainer))return null;
+    const startNode=range.startContainer;
+    const root=(startNode.nodeType===1?startNode:startNode.parentElement)?.closest("#source-dialog .source-text, #source-dialog .source-excerpt");
+    if(!root||!root.contains(range.endContainer))return null;
     const before=range.cloneRange();before.selectNodeContents(root);before.setEnd(range.startContainer,range.startOffset);
-    const start=cwLength(before.toString()), quote=range.toString(), end=start+cwLength(quote);
+    const start=Number(root.dataset.start||0)+cwLength(before.toString()), quote=range.toString(), end=start+cwLength(quote);
     if(quote.trim()&&end-start<=4000&&cwSlice(s,start,end)===quote)return cwAnchor(s,start,end);
   }
   const p=state.sourceIsEvidence && evidenceById.get(state.source);
@@ -133,48 +129,3 @@ function cwTargetDate(value) {
   const today=new Date();today.setHours(0,0,0,0);
   return new Date(value+"T00:00:00") < today;
 }
-
-function cwReviewGraph(base){
-  const book=cwBook();
-  const reviewKinds=new Set(["fact","element","alias","person"]);
-  const nodes=new Map(base.nodes.filter(n=>!reviewKinds.has(n.kind)).map(n=>[n.id,n]));
-  const edges=base.edges.filter(l=>nodes.has(l.source)&&nodes.has(l.target));
-  for(const el of book.elements)nodes.set("element:"+el.id,{id:"element:"+el.id,kind:"element",label:el.title,
-    detail:el.group,source_ids:[],evidence_ids:[],qualification:"Counsel-defined proof element. Inspect the proof chart for its evidence and gaps."});
-  for(const f of book.facts){
-    const eid="work-"+f.id, source=sourceById.get(f.anchor.source);
-    if(!source||!cwRegister(eid,f.anchor))continue;
-    const sid=source.source_id, fact="fact:"+f.id, doc="document:"+sid;
-    const common={source_ids:[sid],evidence_ids:[eid]};
-    nodes.set(fact,{...common,id:fact,kind:"fact",label:f.wording,detail:f.actor,qualification:"Counsel-authored proposition."});
-    if(!nodes.has(doc))nodes.set(doc,{...common,id:doc,kind:"document",label:source.relative_path,detail:"",
-      qualification:"Authorized source version."});
-    edges.push({source:fact,target:doc,label:"Quoted passage",evidence_ids:[eid],qualification:"Verified selection in the source version."});
-    const el=nodes.get("element:"+f.element);
-    if(el){
-      if(!el.source_ids.includes(sid))el.source_ids.push(sid);
-      el.evidence_ids.push(eid);
-      edges.push({source:el.id,target:fact,label:"Element "+f.role.toLowerCase(),kind:f.role.toLowerCase(),evidence_ids:[eid],
-        qualification:"Proof role assigned by counsel."});
-    }
-  }
-  for(const a of cwAliases()){
-    const f=cwFact(a.fact), detail=a.actor, evidence_ids=["work-"+f.id], source_ids=[f.anchor.source];
-    const qualification="Identity link confirmed by counsel from this passage.";
-    for(const kind of ["alias","person"])nodes.set(kind+":"+a.id,{id:kind+":"+a.id,kind,label:a[kind],detail,evidence_ids,source_ids,qualification});
-    edges.push({source:"alias:"+a.id,target:"person:"+a.id,label:"Confirmed identity",evidence_ids,qualification});
-  }
-  if(state.sourceIds){
-    const mapped=new Set([...nodes.values()].filter(n=>n.kind==="document"||n.kind==="communication").flatMap(n=>n.source_ids));
-    for(const sid of state.sourceIds){
-      const s=sourceById.get(sid);
-      if(!s||mapped.has(sid))continue;
-      const id="document:"+sid;
-      nodes.set(id,{id,kind:"document",label:s.relative_path,detail:"",source_ids:[sid],evidence_ids:[],
-        qualification:"Authorized document. Its text is searchable and its recorded connections appear here."});
-    }
-  }
-  return {nodes:[...nodes.values()],edges};
-}
-
-

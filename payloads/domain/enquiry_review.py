@@ -4,7 +4,7 @@ import re
 from mn_sdk.blueprint.memory import digest, runtime_text_memory
 
 from .claim_memory import _notes
-from .evidence_admission import review_closure
+from .evidence_admission import IncompleteSupport, review_closure, support_groups
 from .gap_work import classify
 from .round_state import load, read, save
 from .source_query import PRINCIPAL
@@ -115,10 +115,12 @@ def follow_up_leads(root, item):
     if result.get("unresolved"):
         return []
     leads = []
-    for group in result.get("support_groups", []):
+    for ids, complete, _ in support_groups(result):
+        if not complete:
+            continue
         try:
-            spans = review_closure(result["passages"], [{"result": result}], group["source_evidence_ids"])
-        except ValueError:
+            spans = review_closure(result["passages"], [{"result": result}], ids)
+        except IncompleteSupport:
             continue  # An incomplete component cannot become evidence in a later round.
         if 0 < len(spans) <= 12:
             lead = [{k: span[k] for k in ("source_id", "content_sha256", "start_offset", "end_offset")}

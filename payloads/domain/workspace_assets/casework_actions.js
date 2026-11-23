@@ -72,15 +72,7 @@ document.addEventListener("mousedown",ev=>{
 document.addEventListener("submit",ev=>{
   if(!W.casework||W.package_mode==="approved_excerpt_briefing")return;
   const form=ev.target;
-  if(form.id==="cw-question"){
-    ev.preventDefault();const q=String(new FormData(form).get("question")||"").trim();
-    if(!q)return;
-    const follow=/\b(those|them|these|only|of the same)\b/i.test(q);
-    const chain=follow?[...cwConversation,q]:[q];
-    cwAnswer=chain.length>8?{error:"Start a new question after eight turns."}:cwRunChain(chain);
-    if(!cwAnswer.error)cwConversation=chain;
-    renderedState="";render();
-  }else if(form.id==="cw-witness-filter"){
+  if(form.id==="cw-witness-filter"){
     ev.preventDefault();const data=new FormData(form);
     cwWitness=data.get("witness");cwIssue=data.get("element");renderedState="";render();
   }else if(form.id==="cw-editor"){
@@ -120,27 +112,6 @@ document.addEventListener("click",async ev=>{
       case "cw-add-alias":return cwAliasEditor(id);
       case "cw-reverse-alias":return cwDialog("Reverse identity link","reverse",cwField("Reviewed by","actor"),"Reverse link",id);
       case "cw-add-event":return cwEventEditor();
-      case "cw-new-query":cwConversation=[];cwAnswer=null;renderedState="";return render();
-      case "cw-answer-graph":{
-        const sources=[...new Set((cwAnswer?.matches||[]).map(row=>row.sid))];
-        if(!sources.length)return;
-        cwReturnScope=Object.fromEntries(["query","address","from","to","sourceIds","supportingOnly"].map(k=>[k,state[k]]));
-        goto({view:"People & relationships",graphMode:"case",sourceIds:sources.slice(0,60),query:"",address:"",from:"",to:"",
-          supportingOnly:false,mapQuery:"",mapFocus:"",mapSelection:"",mapEdge:"",source:null});
-        if(sources.length>60)notice("Showing the first 60 matching records in the graph.");
-        return;
-      }
-      case "cw-back-to-question":{
-        const scope=cwReturnScope;cwReturnScope=null;
-        return goto({...scope,view:"Case questions",source:null});
-      }
-      case "cw-save-query":
-        if(!cwConversation.length||cwAnswer?.error)return;
-        if(!book.queries.some(q=>JSON.stringify(q.chain)===JSON.stringify(cwConversation))){
-          if(book.queries.length>=500)throw new Error("The saved question limit is 500.");
-          book.queries.push({id:cwId(),chain:[...cwConversation]});
-        }break;
-      case "cw-rerun-query":cwConversation=[...book.queries.find(q=>q.id===id).chain];cwAnswer=cwRunChain(cwConversation);renderedState="";return render();
       case "cw-statement":return await cwDownloadWord("statement");
       case "cw-review-word":return await cwDownloadWord("review");
       case "cw-outline-word":return await cwDownloadWord("outline",id);

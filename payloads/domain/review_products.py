@@ -142,8 +142,15 @@ def issue_brief(workspace):
     if workspace['issues']:
         heading = {"case_strategy": "Competing accounts", "witness_preparation": "Witness questions and exhibits"}.get(objective, "Questions examined")
         lines += ['## ' + heading, '']
+    by_id = {q['id']: q for q in workspace['issues'] if 'id' in q}
     for issue in workspace['issues']:
         lines += ['### ' + escaped(issue['question']), '', 'Assessor outcome · ' + escaped(issue['status']), '']
+        if issue.get('origin') in {'Reviewed plan', 'Edited in Chat', 'Added in Chat', 'Follow-up'}:
+            lines += ['Question origin · ' + escaped(issue['origin']), '']
+        if parent := by_id.get(issue.get('parent_id')):
+            lines += ['Follow-up to “' + escaped(parent['question']) + '”', '']
+        if issue.get('assessment'):
+            lines += ['Draft answer · ' + escaped(issue['assessment']), '']
         if objective in {"witness_preparation", "case_strategy"}:
             for label, ids in (("Supporting passages", issue["supporting_evidence"]),
                                ("Contrary passages", issue["contradictory_evidence"])):
@@ -200,6 +207,8 @@ def issue_brief(workspace):
         f"{len(coverage.get('assessor_source_ids', []))} source records admitted to assessor packets; {len(coverage.get('reviewer_source_ids', []))} to reviewer packets.",
         'Packet admission does not certify complete extraction, model comprehension or attorney review.',
         'Consistency status: ' + escaped(workspace.get('consistency', {}).get('status', 'unmeasured')), '']
+    if any(row.get('incomplete_evidence_support') for row in coverage.get('model_packets', [])):
+        lines += ['Some relationships or source dependencies could not be verified and were excluded from review.', '']
     if workspace.get('consistency', {}).get('withheld_finding_ids'):
         lines += ['Some draft claims were withheld for consistency review. See case/consistency_review.json; their wording is not an accepted finding.', '']
     return '\n'.join(lines)

@@ -10,6 +10,16 @@ MARKERS = (
 REASON = "Potential privileged material; human handling review required."
 
 
+def permitted_sources(settings, documents):
+    known = {d.source_id for d in documents}
+    selected = settings.get("authorized_source_ids")
+    if selected is None:
+        return known
+    if not isinstance(selected, list) or any(not isinstance(key, str) or key not in known for key in selected):
+        raise ValueError("workspace.authorized_source_ids must name sources in the frozen matter")
+    return set(selected)
+
+
 def potential_privilege(text):
     normalized = re.sub(r"[-\u2010-\u2015]", " ", (text or "").casefold())
     normalized = " ".join(normalized.split())

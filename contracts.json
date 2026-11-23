@@ -317,6 +317,16 @@
         "required": true
       },
       {
+        "artifact_id": "investigation_question_plan",
+        "path": "case/plan/reviewed.json",
+        "mime_type": "application/json",
+        "type": "question_plan",
+        "producer": "workflow",
+        "schema_version": "mn.litigation.question_plan.v1",
+        "privacy": "confidential",
+        "required": false
+      },
+      {
         "artifact_id": "matter_intake",
         "path": "case/matter.json",
         "mime_type": "application/json",

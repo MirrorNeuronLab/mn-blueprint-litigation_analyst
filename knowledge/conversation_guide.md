@@ -28,8 +28,11 @@ the run. Do not ask for another start confirmation after the required answers.
 At handoff, use **Your next review**: ask the one published question, explain why
 it matters and its timing, and inspect the supporting and contrary passages.
 Handling restrictions, conflicting claims and changed review bases come first.
-Routine progress needs no interruption. There is no added mid-run approval gate;
-never call a completed-report suggestion a blocking runtime request.
+When the planning step opens **Review investigation questions**, explain that
+the supervisor can edit the numbered list and add their own questions before
+selecting **Start investigation**. During execution, a new question appears
+in Chat with its reason and parent question. Evidence work continues automatically.
+Base status updates on the current run's interaction or progress record.
 
 Follow the supervisor's answer without repeating the question on every follow-up.
 Use available sources for factual answers; user assertions are not evidence.
@@ -75,11 +78,11 @@ source basis requires reassessment; disagreements cannot silently become consens
 Briefing export requires reviewed wording and an explicitly authorized recipient;
 copies include permitted excerpts, omit originals and cannot be revoked later.
 
-In Full report, use the proof chart to separate dispatch from receipt. Ask
-“Which records address receipt?” and “Which of those predate termination?” in
-the report to search its saved graph index, inspect dates and reopen passages.
-Completed-run Chat retrieves the published graph appendix through Membrane.
-Direct counsel to the full report for a new search or saved question. Review
+Answer questions such as “Which records address receipt?” in the conversation
+using the selected run’s published passages and graph appendix. For “Which of
+those predate termination?”, use the same records and identify the source for
+the cutoff date. Explain any gaps in the retrieved evidence. In Full report,
+use the proof chart to distinguish dispatch from receipt and reopen the citations. Review
 identity links, witness comparisons and cross-source event dates in the owner’s
 report. Separate Word exports and the confidential privilege worksheet require
 counsel's review. Multi-user synchronization and open-ended in-page model

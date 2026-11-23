@@ -28,6 +28,14 @@ def validate_graph_query(query):
     return ensure_bounded_readonly_rgql(query, max_limit=50)
 
 
+def source_passage(evidence):
+    # Other question branches can raise a passage's best search score. The
+    # question's committed searches supply its rank, including during replay.
+    passage = asdict(evidence)
+    del passage["relevance_score"]
+    return passage
+
+
 def assessment_schema(task, evidence_ids, citable_ids=None):
     citation = {"$ref": "#/$defs/passage"} if evidence_ids else {"type": "string"}
     work_item = object_schema({"question": {"type": "string", "minLength": 1, "maxLength": 500},
@@ -101,7 +109,7 @@ def admit_decision(frozen, stage, instruction, base, spans, records, financial, 
     return data, schema
 
 
-@activity_operation('Collecting investigation evidence', completed='Collecting investigation evidence: completed')
+@activity_operation('Collecting source passages', completed='Source passages collected')
 def collect_evidence(context, work):
     root, frozen, task = task_input(context, work)
     name = f"case/rounds/{task['prefix']}-evidence.json"
@@ -183,7 +191,7 @@ def collect_evidence(context, work):
     return {"evidence": ref}
 
 
-@activity_operation('Assessing the investigation hypothesis', completed='Assessing the investigation hypothesis: completed')
+@activity_operation('Drafting an answer from the evidence', completed='Draft answer prepared')
 def assess_hypothesis(context, work):
     llm_client = context.resources.get("llm")
     root, frozen, task = task_input(context, work)
@@ -205,7 +213,7 @@ def assess_hypothesis(context, work):
                for p in r['result'].get('passages', [])]
     ranked = list(dict.fromkeys([i for pair in zip_longest(support,counter) for i in pair if i]
                                + collected['evidence_ids']))
-    spans = [asdict(by_id[id]) for id in ranked if id in allowed
+    spans = [source_passage(by_id[id]) for id in ranked if id in allowed
              and by_id[id].source_id not in frozen['source_review_flags']]
     instruction = (
         "Assess the committed enquiry. Write one sentence per narrative field, one ordinary alternative and one "
@@ -221,6 +229,8 @@ def assess_hypothesis(context, work):
         "Use any prior review_direction to identify what needs testing. Ground the new answer in the supplied source passages. "
         "Distinguish requests, approvals, postings, reversals, settlement, estimates and actual loss. "
         "Suggest at most one specific next record or interview in work_items. Re-read available records internally. "
+        "Name the document a reviewer could request and what it would resolve. Keep absence or uniqueness "
+        "claims within the passages actually examined. Use record names in follow-ups instead of tool or field names. "
         "Do not invent a custodian, assignment, deadline or completed collection.")
     from .evidence_admission import assess_admitted
     from .intake import PreparedCorpus
@@ -261,13 +271,16 @@ def assess_hypothesis(context, work):
     h = value["hypothesis"]
     if h["id"] != task["hypothesis"]["id"] or h["parent_id"] is not None:
         raise ValueError("Assessment changed the committed hypothesis identity")
+    h["question"] = task["hypothesis"]["question"]
+    h["parent_id"] = task["hypothesis"].get("parent_id")
+    value["question_origin"] = task["hypothesis"].get("origin", "Model enquiry")
     cited = set(h["supporting_evidence"] + h["contradictory_evidence"])
     cited.update(e for f in value["report"]["findings"] for e in f["evidence_ids"])
     if not cited <= visible or (h["status"] in ("supported", "contradicted") and not cited):
         raise ValueError("Assessment cites unavailable evidence")
     if any(f["id"] != task["prefix"] for f in value["report"]["findings"]):
         raise ValueError("Finding identity must match committed task")
-    admitted_coverage = packet_coverage(data['evidence'], documents)
+    admitted_coverage = packet_coverage(data['evidence'], documents, data['support_admission'])
     data = {"source_review_flags": frozen["source_review_flags"]}
     submit_report(data, value["report"], store, frozen["investigation_id"])
     value["counsel_issue_ids"] = task["hypothesis"].get("counsel_issue_ids", [])
@@ -279,7 +292,26 @@ def assess_hypothesis(context, work):
     return {"assessment": ref}
 
 
-@activity_operation('Reviewing an investigation finding', completed='Reviewing an investigation finding: completed')
+@activity_operation('Looking for an independent contrary record', completed='Independent counterevidence search completed')
+def check_counterevidence(context, work):
+    root, frozen, task = task_input(context, work)
+    action_path = f"case/rounds/{task['prefix']}-review-search.json"
+    if (root / action_path).exists():
+        return {"counter_search": save(root, action_path, read(root / action_path))}
+    corpus, _ = validate_indexes(root / 'case', frozen['config']['investigation']['access_scope'])
+    store = EvidenceStore(root / 'case/evidence.sqlite3')
+    runtime = bind_skills(root / 'case', corpus, store, frozen['investigation_id'],
+        [d['name'] for d in source_manifest(__file__)['skill_dependencies']],
+        config=frozen['config'], scope=frozen['memory_scope'])
+    runtime.read_skill(DOC)
+    query = counter_query(task['hypothesis'], frozen.get('matter', {}))
+    result = runtime.invoke_case_skill(DOC, 'search', {'query': query, 'top_k': frozen['config']['investigation']['top_k']})
+    independent = {'purpose': 'independent_counter', 'action': {'query': query},
+                   'result': cleared_observation(result, frozen['source_review_flags'])}
+    return {"counter_search": save(root, action_path, independent)}
+
+
+@activity_operation('Checking the answer against its citations and contrary records', completed='Citation review finished')
 def review_finding(context, work):
     llm_client = context.resources.get("llm")
     root, frozen, task = task_input(context, work)
@@ -299,41 +331,33 @@ def review_finding(context, work):
     finding_ids = [f["id"] for f in assessment["report"]["findings"]]
     schema["properties"]["accepted_ids"] = {"type": "array", "uniqueItems": True,
         "maxItems": len(finding_ids), "items": {"enum": finding_ids} if finding_ids else {"type": "string"}}
-    from .evidence_admission import review_closure
+    from .evidence_admission import IncompleteSupport, review_closure
     from .intake import PreparedCorpus
     documents = PreparedCorpus(root / 'case', frozen['config']['investigation']['access_scope']).scan()
-    corpus, _ = validate_indexes(root / 'case', frozen['config']['investigation']['access_scope'])
     collected = read(root / f"case/rounds/{task['prefix']}-evidence.json")
     records = list(collected['records'])
-    # A fresh source search is independent of the assessor's chosen citations.
-    query = counter_query(task['hypothesis'], frozen.get('matter', {}))
     action_path = f"case/rounds/{task['prefix']}-review-search.json"
-    if (root / action_path).exists():
-        independent = read(root / action_path)
-    else:
-        runtime = bind_skills(root / 'case', corpus, store, frozen['investigation_id'],
-            [d['name'] for d in source_manifest(__file__)['skill_dependencies']],
-            config=frozen['config'], scope=frozen['memory_scope'])
-        runtime.read_skill(DOC)
-        result = runtime.invoke_case_skill(DOC, 'search', {'query':query,
-            'top_k':frozen['config']['investigation']['top_k']})
-        independent = {'purpose':'independent_counter', 'action':{'query':query},
-            'result':cleared_observation(result, frozen['source_review_flags'])}
+    independent = read(root / action_path)
     counter_search_ref = save(root, action_path, independent)
     records.append(independent)
     extra, financial = supplement(documents, frozen['source_review_flags'], frozen.get('matter', {}), records,
         frozen['config'].get('text_memory', {}).get('max_context_bytes', 32768) // 2)
     records.append(extra)
     register(store, frozen['investigation_id'], documents, records)
-    all_spans = [asdict(e) for e in store.evidence_for(frozen['investigation_id'])
-                 if e.source_id not in frozen['source_review_flags']]
-    required = review_closure(all_spans, records, cited)
-    available_ids = {p['evidence_id'] for r in records for p in r['result'].get('passages', [])} | cited
-    required_ids = {p['evidence_id'] for p in required}
-    by_id = {e['evidence_id']:e for e in all_spans}
+    stored = {e.evidence_id: e for e in store.evidence_for(frozen['investigation_id'])
+              if e.source_id not in frozen['source_review_flags']}
     independent_ids = [p['evidence_id'] for p in independent['result'].get('passages', [])]
-    ranked = dict.fromkeys(independent_ids + collected['evidence_ids'] + list(by_id))
-    spans = required + [by_id[i] for i in ranked if i in available_ids - required_ids and i in by_id]
+    observed = (p['evidence_id'] for r in records for p in r['result'].get('passages', []))
+    ranked = dict.fromkeys([*independent_ids, *collected['evidence_ids'], *observed, *sorted(cited)])
+    all_spans = [source_passage(stored[key]) for key in ranked if key in stored]
+    support_issue = None
+    try:
+        required = review_closure(all_spans, records, cited)
+    except IncompleteSupport as exc:
+        required = []
+        support_issue = str(exc)
+    required_ids = {p['evidence_id'] for p in required}
+    spans = required + [span for span in all_spans if span['evidence_id'] not in required_ids]
     assessor_keys = keys_for(assessment.get('evidence_review_coverage', {}).get('admitted_evidence_ids', []))
     for span in spans:
         span['cited_in_finding'] = span['evidence_id'] in direct
@@ -365,9 +389,9 @@ def review_finding(context, work):
         {'report':assessment['report'], 'hypothesis':assessment['hypothesis']},
         spans, records, financial, lambda _: schema)
     conflicts = consistency_checks(assessment['report'], financial)
-    dispatched = required_ids <= {e['evidence_id'] for e in packet['evidence']}
+    dispatched = support_issue is None and required_ids <= {e['evidence_id'] for e in packet['evidence']}
     if not dispatched:
-        value = {'accepted_ids':[], 'issues':['Complete cited dependency packet did not fit review capacity.']}
+        value = {'accepted_ids':[], 'issues':[support_issue or 'Complete cited dependency packet did not fit review capacity.']}
     else:
         value = complete(root, frozen, task['prefix'] + '-review', 'review', instruction, packet, schema, llm_client)
         checks = value.pop('financial_checks', [])
@@ -388,7 +412,7 @@ def review_finding(context, work):
             value['issues'].append(conflict['reason'])
     review_report(data, value)
     value['consistency_checks'] = conflicts
-    value['evidence_review_coverage'] = packet_coverage(packet['evidence'], documents)
+    value['evidence_review_coverage'] = packet_coverage(packet['evidence'], documents, packet['support_admission'])
     value['independent_search'] = action_path
     value['model_dispatched'] = dispatched
     value['feedback'] = enquiry_review.feedback(task, assessment, value, collected, independent,
@@ -400,7 +424,7 @@ def review_finding(context, work):
     return {'review': ref}
 
 
-@activity_operation('Summarizing the investigation round', completed='Summarizing the investigation round: completed')
+@activity_operation('Bringing the question reviews together', completed='Question reviews summarized')
 def summarize_round(context, work):
     root, frozen, task = task_input(context, work)
     state = checkpoint(root, frozen)

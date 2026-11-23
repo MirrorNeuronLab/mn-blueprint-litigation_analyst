@@ -63,14 +63,23 @@ class InvalidSearchPair(ValueError):
 def _validate_plan(schema, value):
     validate(schema, value)
     if value["decision"] == "execute":
-        for hypothesis in value["hypotheses"]:
-            support = " ".join(hypothesis["support_query"].casefold().split())
-            counter = " ".join(hypothesis["counter_query"].casefold().split())
-            if not support or not counter or support == counter:
-                raise InvalidSearchPair(
-                    "The planner could not produce distinct support and counter-evidence searches "
-                    f"for enquiry {hypothesis['id']}"
-                )
+        _check_searches(value["hypotheses"])
+
+
+def _check_searches(hypotheses):
+    for hypothesis in hypotheses:
+        support = " ".join(hypothesis["support_query"].casefold().split())
+        counter = " ".join(hypothesis["counter_query"].casefold().split())
+        if not support or not counter or support == counter:
+            raise InvalidSearchPair("The planner could not produce distinct support and counter-evidence searches")
+
+
+def _validate_designs(schema, value):
+    validate(schema, value)
+    rows = value["searches"]
+    if len(set(row["id"] for row in rows)) != len(rows):
+        raise ValueError("Each reviewed question needs its own search design")
+    _check_searches(rows)
 
 
 def complete(root, frozen, key, stage, instruction, data, schema, client=None):
@@ -106,12 +115,13 @@ def complete(root, frozen, key, stage, instruction, data, schema, client=None):
         value = durable_json_decision(
             root / f"case/rounds/models/{key}.json",
             system=system, request=request, schema=schema,
-            validator=_validate_plan if stage == 'plan' else validate,
+            validator={'plan': _validate_plan, 'search_design': _validate_designs}.get(stage, validate),
             context_root=root / "case/context-memory",
             context_scope=scope, principal="round-specialists", stage=stage,
             policy=policy, max_tokens=policy.output_tokens,
             client=client, schema_name="litigation_stage",
-            memory=memory, memory_recall=stage == 'plan', memory_query=f"{focus} {stage}",
+            memory=memory, memory_recall=stage == 'plan' and frozen['config'].get('workspace', {}).get('authorized_source_ids') is None,
+            memory_query=f"{focus} {stage}",
             memory_requirements=context_requirements(frozen['config'],'optional'),
             memory_max_results=limit,
             memory_max_context_bytes=min(max(512,context_bytes-evidence_bytes), max(512,remaining)),

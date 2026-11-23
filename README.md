@@ -4,9 +4,31 @@ The default output destination is `~/Downloads/litigation-analyst`. New runs
 declare their reports and optional `web/index.html` package through the SDK's
 file-publication contract, so the runtime can deliver them and publish the actual
 result location. In OtterDesk, **Full report** opens beside **Output folder**.
-The report opens with the review handoff and case graph. Review coverage, the
-stopping reason and next steps are available even when no draft findings were
-retained. Existing frozen runs retain their original files and delivery state.
+The report opens with a **Case summary**. Read the key findings and selected
+source passages, then open **Your next review** to see the record to check.
+**Compare cited records** opens two documents side by side when the review
+cites different document texts. If no finding cleared review, **Findings**
+links to the questions examined and their evidence.
+
+**Evidence** lists cited documents first and keeps separate copies discoverable.
+Select **Read cited passage** for the exact text, then **Read in context** for
+the surrounding document. **Reports** contains the counsel review brief and a
+searchable passage appendix. A completed run can be opened with the new layout
+using `render_review.py` and a separate reading-copy folder as described below.
+
+## Plan and execute
+
+**Plan.** The co-worker inventories the records, checks which sources it can use
+and proposes up to two questions in Chat. Edit the numbered lines, remove a
+question, or add your own on a new line. Choose **Start investigation** to
+submit the list. The default review allows up to eight initial questions.
+
+**Execute.** Each question gets an evidence search and an independent search
+for a contrary account. A reviewer checks the draft answer against the cited
+passages and the contrary record. If a new lead warrants another question,
+Chat shows the question, what prompted it and the question it came from.
+The co-worker continues within the same source scope and review allowance.
+The **Questions** view brings together the answers, sources and follow-ups.
 
 ## Adaptive investigation (5.6)
 
@@ -32,6 +54,12 @@ the authorized sources again. Independent reviewers run a fresh counter-search.
 The next planner can retrieve the latest independent review for each enquiry,
 including withheld findings, searches already tried and the next record to check.
 Exact passages in the frozen case files supply the citations.
+On a later run of the same case, Membrane can reuse an original document when
+its content, page locations and access still match the saved revision.
+
+Each link in an email chain must point to a verified header passage. The
+co-worker omits a chain with a missing or inconsistent source link and continues
+with the remaining evidence. The review draft flags incomplete evidence support.
 
 For a supplemental production, start a new run with the updated folder and its
 previous review export. If the saved casework covers the same matter and its
@@ -46,12 +74,10 @@ fact**. Enter the proposition, reviewer and evidence role. A sent email can
 support dispatch while receipt remains open. Exact copies count as one
 supporting source version. Each fact can be reopened in the evidence viewer.
 
-Choose **Ask the case graph** on Overview. Ask “Which records address receipt?”
-and then “Which of those predate termination?” Inspect the interpreted cutoff,
-its source, the matching passages and the coverage. **Show matching records on graph** opens their recorded connections. **Save question** keeps both
-turns for the next production. The full report searches an offline index
-generated from the authorized DuckDB graph. Completed-run Chat uses the
-published graph appendix through Membrane.
+Ask the co-worker in **Chat**, “Which records address receipt?” Follow up with
+“Which of those predate termination?” Chat uses the published passages and graph
+appendix available for that run. Open the cited records in **Evidence** to check
+the wording and dates, or **Case graph** to inspect their connections.
 
 Under **People & events**, compare an attributed witness statement with an
 exhibit, edit the deposition question, or confirm and reverse a cited alias.
@@ -72,14 +98,19 @@ and set **Previous review decisions** in Configure. The next publication checks
 the citations against the authorized source versions. Open the
 [notice-review pilot](examples/notice_review/README.md) to exercise the handoff.
 
-## Case graph and graph questions (5.3)
+## Case graph
 
-Open **Full report** to see the case graph on Overview. **Explore graph** opens
-the full view. Search for a name, finding, document, or transaction reference.
-Select a node to focus on its neighbors, or select a connection to see the
-source passages behind it. Solid green lines mark supporting draft citations.
-Dashed amber lines mark contrary draft citations. The connections table offers
-the same evidence controls. Use the zoom controls or drag the full graph to pan.
+Open **Case graph** beside Overview to follow the matter objective through its
+questions to cited documents and their participants. Choose **Show hypotheses**
+to see the alternative explanations recorded for each question. Supporting and
+contrary links open the exact passages assigned to the question or finding.
+Selecting a document also shows its collected copies and recorded header roles.
+
+Choose a question branch, search for an exhibit or person, or use **Trace to case
+goal** on a selected item. **Browse graph as a list** and the selected item's
+connections provide the same inspection controls by keyboard. The graph runs
+offline with bundled Cytoscape.js 3.34.3 and cytoscape-dagre 4.1.0. Narrow
+views arrange the graph from top to bottom.
 
 Each new run saves `case/case_graph.duckdb` in its audit archive. The graph
 stores typed objects, directed relationships, and exact citation locators.
@@ -132,7 +163,7 @@ Optional counsel intake and earlier review decisions stay in Configure; first se
 Set handling exclusions before starting; a Chat answer cannot clear a restricted
 source.
 
-The completed draft and offline overview begin with **Your next review**: one
+The completed draft and offline overview include **Your next review**, one
 question, why it matters now, when to decide, and links to the relevant source
 passages. Handling restrictions come first, followed by conflicting claims and
 changed or disputed review bases. Ordinary draft findings and evidence gaps
@@ -146,11 +177,9 @@ Use the finding review to record attributable wording decisions; save a copy or
 export review decisions to retain them. Discussion grants no approval or sharing
 permission. Reviewed briefings exclude the unreviewed handoff.
 
-These changes use the existing desktop and blueprint contracts. They add no
-mid-run checkpoint, runtime change or new execution authority. Refresh the idle
-prepared co-worker definition for new runs; frozen and active runs retain their
-original behavior. Optional webpage failure still leaves the authoritative draft
-and evidence available.
+The completed-report handoff uses the existing desktop and blueprint contracts.
+Refresh the idle prepared co-worker definition to pick up the workflow for new
+runs. The draft and its evidence are also available as files.
 
 Version 5.0.2 introduced verified runtime downloads. Version 5.2.2 declares the
 five Markdown reports, `review_index.json` and optional web package through the
@@ -162,12 +191,10 @@ retain their original files.
 
 ## Version 3.3.1: simpler matter review
 
-The local workspace has eight primary views: **Overview**, **Findings**,
-**Questions**, **Evidence**, **People & events**, **Timeline**, **Reports** and
-**Review history**. Matter settings is a secondary link. Existing bookmarked
-routes and saved views retain their original identities: comparisons belong to
-Evidence, briefing preparation belongs to Reports, and changes/audit share
-Review history. Questions includes proposed internal review work and evidence gaps.
+The full-width sidebar shows every destination, including **Case graph** and
+**Matter settings**. Under 960 pixels, **More views** groups secondary destinations.
+Comparisons belong to Evidence, briefing preparation to Reports, and changes
+and audit to Review history. Questions includes proposed review work and evidence gaps.
 
 Overview puts recorded facts before counts and shows compact correction notices.
 Flagged drafts appear under Findings → Needs attention and remain ineligible for
@@ -190,17 +217,10 @@ counsel reading brief and exact source appendix with headings, tables, quotation
 source drill-throughs and Markdown downloads. Reports describe the full authorized
 snapshot; analytical filters do not rewrite them. Raw HTML in Markdown stays inert.
 
-**People & relationships → People & events** connects named email correspondents,
-communication records, counsel-labelled financial records and transaction references.
-Select a node to inspect its neighborhood and exact supporting passages. Names are
-header labels on separate address identities, not verified people. Shared-source
-links do not infer participation, causation or payment. Chronology includes the
-financial records with their date/annotation basis; unknown dates remain unresolved.
-The advanced source graph and its temporal path tools remain available separately.
-The map projects up to 60 communication records, 20 addresses per header field and
-60 financial records; the display shows at most 49 links and 60 nodes. Omitted
-record counts are disclosed. Duplicate communication copies are source records,
-not newly inferred occurrences.
+**People & events → Source relationships** provides address and document lookup
+and temporal paths. Address identities come from headers. Witness attributions
+and confirmed aliases in the case graph carry their own citations. Timeline
+includes financial records with their recorded date or annotation basis.
 
 The reading brief rechecks exact source bindings and existing explicit-absence
 consistency rules. Conflicting model claims remain inspectable in quality review
@@ -278,8 +298,9 @@ reserves unchanged until a corrected factual baseline and attorney review suppor
 shortening them. No speed or accuracy gain is claimed solely from these changes.
 
 
-The optional `review.profile=first_pass` performs one round (up to two enquiries),
-uses observed structural relationships, and limits investigation decisions to six.
+The optional `review.profile=first_pass` investigates the reviewed list in one
+round using observed structural relationships. The default cap is 18 investigation
+decisions, including capacity for questions added in Chat.
 A separate harmless readiness decision checks the selected model before source
 acquisition or case inference. It sends no case material, preserves the configured
 provider, and records readiness in `case/model_preflight.json`. The current SDK can report
@@ -295,8 +316,8 @@ No local-model fallback is used. Source integrity and known context limits still
 First-pass planning checks a 600-second allowance between rounds; it does not
 interrupt in-flight work, cap total wall time, or promise a dollar cost. Provider
 transport/repair attempts are separate from decision counts. `standard` permits up
-to three rounds and sixteen investigation decisions, with configured relationship
-extraction (up to 256 separate calls). Retrieval is ranked, not exhaustive. Every
+to three rounds and 28 investigation decisions with the default question limit.
+Configured relationship extraction may use up to 256 separate calls. Retrieval is ranked, not exhaustive. Every
 report/workspace discloses the effective plan and unexamined counsel questions.
 
 Optional `inputs.payload.matter_file` accepts the bounded JSON contract in
@@ -499,18 +520,12 @@ Validated replay adds no model request or duplicate token measurement.
 
 ## Investigation rounds
 
-The four parent phases remain source preparation → index building → investigation
-→ reviewed draft publication. Investigation initializes a Core-managed child workflow:
-
-1. The LLM planner chooses up to two falsifiable enquiries, distinct support and
-   counter-evidence searches, and zero to two admitted read-only graph views per enquiry.
-2. Core commits the round. An evidence collector executes each enquiry's bounded
-   searches and graph queries, preserving exact source spans and audit records.
-3. An assessor proposes a structured hypothesis and at most one cited finding.
-4. A separate reviewer checks complete cited passages and accepts or withholds
-   the proposed finding. A deterministic summary feeds the next planner decision.
-5. The planner revises enquiries or stops. Replanning occurs only after all
-   committed tasks complete; the parent cannot publish while children are running.
+Planning ends when a supervisor submits the questions in Chat. Core then admits
+the reviewed list as separate branches. The collector records exact passages,
+and an assessor drafts an answer. An independent counter-search can run at the
+same time. Each question's reviewer waits for both results. The round summary
+waits for every reviewer, then the co-worker can follow an open lead or finish
+the brief. A new question receives its own branch and a Chat update.
 
 Since 5.4.1, the planner requests one correction when the model repeats a search.
 The correction uses the same case context and model budget. Evidence collection
@@ -530,14 +545,13 @@ and outstanding evidence work.
 If a later plan selects execute but proposes no enquiries, the investigation
 finishes with a recorded coverage limitation and publishes the reviewed draft.
 
-Tasks execute serially to protect the case evidence database. Core owns admission,
-routing, retries, and completion; the blueprint only proposes admitted task templates.
-The default is at most three rounds, two enquiries per round, and seven child steps
-per round. `dynamic_investigation.max_rounds` can reduce the three-round ceiling;
-`hypotheses_per_round` can be one or two. These bounds permit at most 24 collector retrieval/
-graph-view operations, plus up to six independent reviewer source searches and 16 investigation model decisions, including the final
-stop decision. Legal relationship indexing has a separate bounded extraction
-allowance; a source graph view may execute up to four native adjacency queries.
+Core owns task admission, dependencies, retries and completion. With default
+settings the first round can run eight questions. Follow-up rounds can run two
+questions each. Each question has four tasks, and each round ends with a summary.
+`dynamic_investigation.max_rounds` can reduce the three-round limit. The
+supervisor's opening list is bounded by `max_review_questions` and the available
+decision allowance. Legal relationship indexing has a separate extraction
+allowance. A source graph view may execute up to four native adjacency queries.
 Investigation decisions use a 65,536-token working window. Each request reserves
 up to 8,192 output tokens, within the primary model client's configured limit.
 Use `context_memory.policy.window_tokens` and `context_memory.policy.output_tokens`
@@ -806,11 +820,11 @@ shared assets. Markdown and structured evidence remain the authoritative outputs
 
 ## Native block composition (5.0.0)
 
-The four parent phases and four child-task templates use the stock SDK block
+The parent phases and child-task templates use the stock SDK block
 worker. Source capture, indexing, round planning/tasks and publication receive
 native block contexts and explicit input ports. The old worker bindings,
 runtime-context dictionary and `case_workflow` bridge have been removed. Core
-still schedules the serial child tasks and enforces the three-round limit.
+schedules the child tasks according to their dependencies and enforces the round limit.
 
 SDK checkpoints bind captured evidence to the Job, run and original configuration.
 The source/index/terminal chain retains file hashes and exact source authority;

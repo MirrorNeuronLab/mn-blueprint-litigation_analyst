@@ -5,7 +5,7 @@
     {
       "id": "prepare_case_sources",
       "kind": "source",
-      "label": "Prepare Case Sources",
+      "label": "Plan · Inventory source records",
       "goal": "Inventory and normalize legal sources with exact provenance.",
       "needs": [],
       "control": {
@@ -15,7 +15,7 @@
     {
       "id": "build_case_indexes",
       "kind": "stage",
-      "label": "Build Evidence Indexes",
+      "label": "Plan · Map evidence and relationships",
       "goal": "Build and validate the frozen document index and observed graph before investigation.",
       "needs": [
         "prepare_case_sources"
@@ -25,12 +25,48 @@
       }
     },
     {
-      "id": "investigate_case_evidence",
+      "id": "scope_case_review",
       "kind": "stage",
-      "label": "Investigate Case Evidence",
-      "goal": "Test neutral hypotheses against bounded document and graph evidence.",
+      "label": "Plan · Check source scope",
+      "goal": "Verify the indexes, identify handling restrictions and bind the investigation to its frozen records.",
       "needs": [
         "build_case_indexes"
+      ],
+      "control": {
+        "timeout_seconds": 3600
+      }
+    },
+    {
+      "id": "draft_case_questions",
+      "kind": "stage",
+      "label": "Plan · Draft investigation questions",
+      "goal": "Propose neutral questions from the brief and authorized source samples.",
+      "needs": [
+        "scope_case_review"
+      ],
+      "control": {
+        "timeout_seconds": 3600
+      }
+    },
+    {
+      "id": "review_case_questions",
+      "kind": "stage",
+      "label": "Plan · Review questions in Chat",
+      "goal": "Let the supervisor edit the list and add questions before starting evidence work.",
+      "needs": [
+        "draft_case_questions"
+      ],
+      "control": {
+        "timeout_seconds": 90000
+      }
+    },
+    {
+      "id": "investigate_case_evidence",
+      "kind": "stage",
+      "label": "Execute · Investigate the questions",
+      "goal": "Test neutral hypotheses against bounded document and graph evidence.",
+      "needs": [
+        "review_case_questions"
       ],
       "control": {
         "timeout_seconds": 99999
@@ -39,7 +75,7 @@
     {
       "id": "write_review_draft",
       "kind": "sink",
-      "label": "Publish investigation workspace",
+      "label": "Execute · Publish the case brief",
       "goal": "Verify exact citations and publish a source-linked interactive investigation, immutable snapshot history and review draft.",
       "needs": [
         "investigate_case_evidence"
@@ -81,6 +117,39 @@
               "uses": "mn.blocks.domain_operation@1",
               "hooks": {
                 "operation": "domain.round_tasks:collect_evidence"
+              },
+              "input_schema": {
+                "type": "object",
+                "required": [
+                  "task",
+                  "_child"
+                ]
+              },
+              "limits": {
+                "max_calls": 1,
+                "timeout_seconds": 600
+              }
+            }
+          },
+          "control": {
+            "timeout_seconds": 600,
+            "retry": {
+              "max_attempts": 1
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "task"
+            ]
+          }
+        },
+        "check_counterevidence": {
+          "run": {
+            "block": {
+              "uses": "mn.blocks.domain_operation@1",
+              "hooks": {
+                "operation": "domain.round_tasks:check_counterevidence"
               },
               "input_schema": {
                 "type": "object",
@@ -220,7 +289,7 @@
         ]
       },
       "max_rounds": 3,
-      "max_steps_per_round": 7
+      "max_steps_per_round": 33
     }
   }
 }

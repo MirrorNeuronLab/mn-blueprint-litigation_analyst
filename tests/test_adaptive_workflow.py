@@ -147,6 +147,12 @@ def test_adaptive_planner_hands_off_after_addressing_counsel_issues(tmp_path, mo
     frozen = {"config": config, "deadline": float("inf"), "matter": matter, "payload": {"goal": "Review the notice."}}
     monkeypatch.setattr(round_planning, "open_round", lambda *_: (tmp_path, frozen))
     monkeypatch.setattr(round_planning, "finish", lambda *_: {})
+    from domain import question_plan
+    context_ref = {"path": "case/rounds/context.json"}
+    draft = round_planning.save(tmp_path, question_plan.DRAFT, {"context": context_ref, "proposal": {"hypotheses": []}})
+    review = round_planning.save(tmp_path, question_plan.REVIEW, {"draft": draft, "status": "reviewed"})
+    execution = round_planning.save(tmp_path, question_plan.EXECUTION, {
+        "context": context_ref, "reviewed": review, "proposal": {}, "deadline": 10**12})
     monkeypatch.setattr(round_planning, "discover", lambda *a, **kw: {"authorized_readable_sources": 2, "samples": []})
     planner = Mock(return_value={"decision": "stop", "rationale": "Cleared sources did not resolve timing.", "hypotheses": []})
     monkeypatch.setattr(round_planning, "complete", planner)
@@ -154,7 +160,7 @@ def test_adaptive_planner_hands_off_after_addressing_counsel_issues(tmp_path, mo
                 "counsel_issue_ids": ["notice"], "next_records": [], "review_issues": [], "searches": []}
     round_planning.save(tmp_path, "case/rounds/summary-01.json", {"findings": [{"id": "H01", "feedback": feedback}]})
     result = round_planning.plan_round(SimpleNamespace(resources={}),
-            {"seed": {"context": {"path": "case/rounds/context.json"}}, "_child": {"revision": 1}})
+            {"seed": {"context": context_ref, "execution": execution}, "_child": {"revision": 1}})
     assert result["done"]
     if unexamined:
         planner.assert_called_once()

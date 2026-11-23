@@ -2,8 +2,10 @@
 import hashlib
 from types import SimpleNamespace
 
+from .case_brief import build as build_case_brief
 from .financial_review import build as reconcile
 from .workspace_case_map import case_map
+from .workspace_projection import CASE_QUESTION_GUIDANCE
 
 
 def verify(workspace):
@@ -34,6 +36,7 @@ def attach(workspace):
 
     # Recompute totals from verified annotated quotations rather than cached totals.
     workspace['financial_review'] = verify(workspace)
+    workspace.setdefault('capabilities', {})['case_qa'] = CASE_QUESTION_GUIDANCE
     checks = consistency_checks({'findings': workspace['findings']}, workspace['financial_review'])
     evidence_ids = {p['evidence_id'] for p in workspace['evidence']}
     checks += [c for c in workspace.get('consistency', {}).get('checks', [])
@@ -44,6 +47,7 @@ def attach(workspace):
     workspace['reading_tasks'] = review_tasks(workspace)
     from .supervision import build as build_handoff
     workspace['supervision'] = build_handoff(workspace)
+    workspace['case_brief'] = build_case_brief(workspace)
     workspace['case_map'] = case_map(workspace)
     workspace['reading_reports'] = reports(workspace)
     return workspace
@@ -83,24 +87,47 @@ def review_tasks(workspace):
     return tasks
 
 
-def citations(ids):
-    return ' '.join(f'[Source {n + 1}](exact-source-passages.md#{i})' for n, i in enumerate(dict.fromkeys(ids)))
-
-
 def reports(workspace):
     from .supervision import markdown as review_question
+    from .review_products import finding_wording
     blocked = set(workspace['reading_review']['withheld_finding_ids'])
+    retained = set(workspace['supervision']['retained_finding_ids'])
     financial = workspace['financial_review']
-    lines = ['# Counsel review brief', '', '**Draft for attorney review.** Source statements and annotations are not legal conclusions.', '',
-        '## Decision to support', '', md(workspace.get('matter_scope', {}).get('intended_decision') or workspace['goal']), '',
-        review_question(workspace, appendix='exact-source-passages.md#'), '',
-        '## What the transaction records show', '',
-        '| Reference | Recorded event | Amount | Basis |', '| --- | --- | ---: | --- |']
+    brief = workspace['case_brief']
+    passages = {p['evidence_id']: p for p in workspace['evidence']}
+    numbers = {ident: n for n, ident in enumerate(dict.fromkeys([*brief['cited_ids'], *passages]), 1)}
+
+    def citations(ids):
+        return ' '.join(f'[Passage {numbers[i]}](exact-source-passages.md#{i})' for i in dict.fromkeys(ids))
+
+    lines = ['# Counsel review brief', '', '**Draft for attorney review.**', '', '## Review objective', '',
+             md(workspace.get('matter_scope', {}).get('intended_decision') or workspace['goal']), '']
+    if workspace.get('sample'):
+        lines += ['Synthetic test matter.', '']
+    if retained:
+        lines += ['## Retained draft findings', '']
+    for f in workspace['findings']:
+        if f['id'] in retained:
+            lines += ['### ' + md(f['title']), '', md(finding_wording(f)), '', citations(f['supporting_evidence']), '']
+            if f.get('counter_evidence'):
+                lines += ['**Contrary records** ' + citations(f['counter_evidence']), '']
+            lines += ['**Limitations** ' + md(f['limitations']), '']
+    if not retained:
+        lines += ['No finding cleared review for inclusion in this brief.', '']
+    if brief['highlights']:
+        lines += ['## What the records say', '', 'Selected excerpts from documents cited in this review.', '']
+    for highlight in brief['highlights']:
+        ident = highlight['evidence_id']
+        title = brief['titles'][passages[ident]['source_id']]
+        lines += [md(title), '', *['> ' + line for line in highlight['excerpt'].splitlines()],
+                  '', citations([ident]), '']
+    lines += [review_question(workspace, appendix='exact-source-passages.md#'), '']
+    if financial['events']:
+        lines += ['## What the transaction records show', '',
+                  '| Reference | Recorded event | Amount | Basis |', '| --- | --- | ---: | --- |']
     for record in financial['events']:
         lines.append('| ' + ' | '.join([md(record['transaction_ref']), md(record['event_type'].replace('_', ' ')),
             md(record['currency'] + ' ' + record['amount']), citations(record['evidence_ids'])]) + ' |')
-    if not financial['events']:
-        lines += ['', 'No counsel-labelled transaction records supplied. Inspect the source records; absence of annotations does not establish absence of evidence.']
     for t in financial['transactions']:
         lines += ['', '### ' + md(t['transaction_ref']), '',
             '- Request less stated approval: ' + md(t['currency']) + ' ' + md(t['request_minus_approval'] or 'Not established') + '.',
@@ -110,43 +137,51 @@ def reports(workspace):
     if workspace.get('counsel_issues'):
         lines += ['', '## Counsel questions', '', 'Counsel-supplied review direction; applicable law is not verified.', '']
         for issue in workspace['counsel_issues']:
-            retained = [f for f in workspace['findings'] if f['id'] not in blocked and issue['id'] in f.get('counsel_issue_ids', [])]
+            linked = [f for f in workspace['findings'] if f['id'] in retained and issue['id'] in f.get('counsel_issue_ids', [])]
             lines += ['### ' + md(issue['question']), '',
-                md(' '.join(f['assessment'] for f in retained) or 'No retained narrative answer is established. Review the transaction records and reconcile any conflicting AI draft before using a proposed answer.'), '',
-                citations([i for f in retained for i in f['supporting_evidence']]), '']
-    lines += ['', '## Draft claims requiring correction', '']
+                md(' '.join(finding_wording(f) for f in linked) or issue['status']), '',
+                citations([i for f in linked for i in f['supporting_evidence']]), '']
+    if workspace.get('issues'):
+        lines += ['## Questions examined', '']
+    for issue in workspace.get('issues', []):
+        lines += ['### ' + md(issue['question']), '', 'Investigator assessment · ' + md(issue['status']), '']
+        for label, key in [('Records considered', 'supporting_evidence'), ('Contrary passages', 'contradictory_evidence')]:
+            if issue[key]:
+                lines += [label + ' · ' + citations(issue[key]), '']
+    if blocked:
+        lines += ['## Draft claims requiring correction', '']
     for f in workspace['findings']:
         if f['id'] in blocked:
             ids = [i for c in workspace['reading_review']['checks'] if c['finding_id'] == f['id'] for i in c['evidence_ids']]
             lines += ['### ' + md(f['title']), '', 'Withheld from the reading brief and reviewed briefing. An available transaction record conflicts with an absence claim. Reconcile the complete source before relying on this wording.', '', citations(ids), '']
-    if not blocked:
-        lines += ['No conflict was detected by the limited deterministic checks. Substantive attorney review remains outstanding.', '']
-    lines += ['## Retained draft findings', '']
-    for f in workspace['findings']:
-        if f['id'] not in blocked:
-            lines += ['### ' + md(f['title']), '', md(f['assessment']), '', citations(f['supporting_evidence']), '',
-                '**Contrary records:** ' + citations(f['counter_evidence']), '', '**Limitations:** ' + md(f['limitations']), '']
-    if not any(f['id'] not in blocked for f in workspace['findings']):
-        lines += ['No narrative finding is retained in this reading brief. The source-bound transaction records above remain available for review.', '']
-    lines += ['## Next review work', '']
+    if workspace['reading_tasks'] or workspace['gaps']:
+        lines += ['## Next review work', '']
     for task in workspace['reading_tasks']:
         lines += ['### ' + md(task['title']), '', '- Route: ' + md(task['status']),
             '- Record: ' + md(task['record']), '- Decision it informs: ' + md(task['purpose']),
             '- Closure test: ' + md(task['closure']), '- Owner: Unassigned', '', citations(task['evidence_ids']), '']
-    for gap in ([] if workspace['reading_tasks'] else workspace['gaps']):
+    for gap in workspace['gaps']:
         lines += ['### ' + md(gap['question']), '',
-            '- Route: ' + md(gap.get('status', 'Needs review')) + '.',
-            '- Record or interview: ' + md(gap.get('requested_record', gap['question'])) + '.',
-            '- Decision it informs: ' + md(gap.get('why_it_matters', 'Clarify the factual question')) + '.',
-            '- Closure test: ' + md(gap['closure_condition']) + '.',
-            '- Owner: ' + md(gap.get('owner') or 'Unassigned') + '. Internal target: ' + md(gap.get('internal_target') or 'Not assigned') + '.', '',
-            citations(gap['source_evidence_ids']), '']
-    lines += ['No collection, contact or legal action was performed.', '', '## Scope and limits', '',
-        md(workspace['analysis']['status']) + '. ' + md(workspace['analysis']['scope']), '',
-        'Readable text, packet admission, model checking and attorney approval are separate. Original authenticity, applicable law, external settlement and legal liability remain unverified.']
+            '- **Record to check** ' + md(gap.get('requested_record') or gap['question']),
+            '- **What would resolve it** ' + md(gap['closure_condition'])]
+        if gap.get('owner') and gap['owner'] != 'Unassigned':
+            lines.append('- **Assigned to** ' + md(gap['owner']))
+        if gap.get('internal_target'):
+            lines.append('- **Internal target** ' + md(gap['internal_target']))
+        lines += ['', citations(gap['source_evidence_ids']), '']
+    lines += ['## Scope and limits', '', md(workspace['analysis']['scope']), '']
+    source_ids = set(brief['titles'])
+    coverage = workspace.get('coverage', {})
+    for key, label in [('readable_ids', 'Readable documents'), ('assessor_source_ids', 'Sent for assessment'),
+                       ('reviewer_source_ids', 'Sent for independent review')]:
+        if key in coverage:
+            lines.append(f'- {label} · {len(source_ids.intersection(coverage[key]))} of {len(source_ids)}')
+    lines += ['', 'The counts describe document access and model review. Counsel must verify the evidence and decide how to use it.']
     appendix = ['# Exact source passages', '', 'Generated normalized character locators. Verify originals and surrounding context.', '']
-    for p in workspace['evidence']:
-        appendix += ['## ' + p['evidence_id'], '', md(p['source_id']) + f" · characters {p['start_offset']}:{p['end_offset']}", '',
-            *['> ' + line for line in p['text'].splitlines()], '', citations([p['evidence_id']]), '']
+    for ident, number in numbers.items():
+        p = passages[ident]
+        appendix += ['## ' + ident, '', f"Passage {number} · " + md(brief['titles'][p['source_id']]), '',
+            md(p['source_id']) + f" · characters {p['start_offset']}:{p['end_offset']}", '',
+            *['> ' + line for line in p['text'].splitlines()], '']
     return [{'id': 'counsel-brief', 'title': 'Counsel review brief', 'filename': 'counsel-review-brief.md', 'markdown': '\n'.join(lines)},
         {'id': 'source-passages', 'title': 'Exact source passages', 'filename': 'exact-source-passages.md', 'markdown': '\n'.join(appendix)}]

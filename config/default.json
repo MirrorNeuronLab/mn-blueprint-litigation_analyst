@@ -38,7 +38,8 @@
   },
   "dynamic_investigation": {
     "max_rounds": 3,
-    "hypotheses_per_round": 2
+    "hypotheses_per_round": 2,
+    "max_review_questions": 8
   },
   "text_memory": {
     "enabled": true,

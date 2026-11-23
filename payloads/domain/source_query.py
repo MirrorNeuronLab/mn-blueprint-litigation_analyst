@@ -45,6 +45,7 @@ def publish(context, documents, scope):
                      for entry in read(case/'source_inventory.json')['files']}
         receipts = session.ingest([{'source_ref': d.relative_path, 'text': d.text,
             'allow': [PRINCIPAL], 'upstream': [{**asdict(d), 'text': None,
+                'page_spans': [list(span) for span in d.page_spans],
                 'normalized_sha256': hashlib.sha256(d.text.encode()).hexdigest(),
                 'original_sha256': originals[(d.container_source_id.removeprefix('case:')
                                              if d.container_source_id else d.relative_path)]}]}

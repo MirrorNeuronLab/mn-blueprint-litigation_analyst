@@ -77,17 +77,89 @@
         "timeout_seconds": 99999
       }
     },
+    "scope_case_review": {
+      "uses": "mn.blocks.domain_operation@1",
+      "hooks": {
+        "operation": "domain.round_state:initialize"
+      },
+      "inputs": {
+        "previous": {
+          "$ref": "upstream",
+          "step_id": "build_case_indexes"
+        }
+      },
+      "outputs": {
+        "result": {
+          "$ref": "flow_output",
+          "path": [
+            "result"
+          ]
+        }
+      },
+      "limits": {
+        "max_calls": 1,
+        "timeout_seconds": 3600
+      }
+    },
+    "draft_case_questions": {
+      "uses": "mn.blocks.domain_operation@1",
+      "hooks": {
+        "operation": "domain.question_plan:draft_questions"
+      },
+      "inputs": {
+        "previous": {
+          "$ref": "upstream",
+          "step_id": "scope_case_review"
+        }
+      },
+      "outputs": {
+        "result": {
+          "$ref": "flow_output",
+          "path": [
+            "result"
+          ]
+        }
+      },
+      "limits": {
+        "max_calls": 1,
+        "timeout_seconds": 3600
+      }
+    },
+    "review_case_questions": {
+      "uses": "mn.blocks.domain_operation@1",
+      "hooks": {
+        "operation": "domain.question_plan:review_questions"
+      },
+      "inputs": {
+        "previous": {
+          "$ref": "upstream",
+          "step_id": "draft_case_questions"
+        }
+      },
+      "outputs": {
+        "result": {
+          "$ref": "flow_output",
+          "path": [
+            "result"
+          ]
+        }
+      },
+      "limits": {
+        "max_calls": 1,
+        "timeout_seconds": 90000
+      }
+    },
     "investigate_case_evidence": {
       "uses": "mn.blocks.bounded_investigation@1",
       "hooks": {
-        "initialize": "domain.round_state:initialize",
+        "initialize": "domain.question_plan:start_execution",
         "plan": "domain.round_planning:plan_round",
         "summarize": "domain.round_planning:summarize"
       },
       "inputs": {
         "previous": {
           "$ref": "upstream",
-          "step_id": "build_case_indexes"
+          "step_id": "review_case_questions"
         }
       },
       "outputs": {

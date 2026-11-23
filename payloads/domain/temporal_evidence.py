@@ -127,6 +127,29 @@ def compare(projection, earlier_id, later_id):
             "evidence_refs": a["evidence_refs"] + b["evidence_refs"], "qualification": "Temporal order does not establish causation."}
 
 
+def path_evidence_ids(path, passages):
+    """Bind every addressing edge to its exact, available header passage."""
+    edges = path.get("edges") if isinstance(path, dict) else None
+    if not isinstance(edges, list) or not edges:
+        return ()
+    ids = []
+    for edge in edges:
+        refs = edge.get("evidence_refs") if isinstance(edge, dict) else None
+        if not isinstance(refs, list) or not refs:
+            return ()
+        for ref in refs:
+            eid = ref.get("evidence_id") if isinstance(ref, dict) else None
+            passage = passages.get(eid) if isinstance(eid, str) and eid else None
+            if passage is None or any(k not in ref or k not in passage or ref[k] != passage[k]
+                    for k in ("source_id", "content_sha256", "start_offset", "end_offset", "text")):
+                return ()
+            ids.append(eid)
+    ids = list(dict.fromkeys(ids))
+    if "source_evidence_ids" in path and path["source_evidence_ids"] != ids:
+        return ()
+    return tuple(ids)
+
+
 def walk(case, corpus, passages, view, config):
     projection = project(tuple(corpus.scan()), json.loads((case / "source_inventory.json").read_text())["repository_id"])
     selected = {p["source_id"] for p in passages}
@@ -135,10 +158,24 @@ def walk(case, corpus, passages, view, config):
         return {"status": "entity_unresolved", "paths": [], "passages": [], "support_groups": [],
                 "unresolved": ["No addressed-message seeds in the selected passages"], "exhaustive": False}
     result = paths(projection, seeds, corpus.access_scope)
-    refs = {ref["evidence_id"]: ref for p in result["paths"] + result["partial_paths"]
-            for edge in p["edges"] for ref in edge["evidence_refs"]}
-    result.update(view=view, passages=list(refs.values()), support_groups=[{
-        "id": view + ":" + str(i), "source_evidence_ids": list(dict.fromkeys(
-            r["evidence_id"] for edge in p["edges"] for r in edge["evidence_refs"])),
-        "complete": True, "required": False} for i, p in enumerate(result["paths"] + result["partial_paths"])])
+    headers = {ref["evidence_id"]: ref for event in projection["events"] for ref in event["evidence_refs"]}
+    refs, groups = {}, []
+    for kind in ("paths", "partial_paths"):
+        bound = []
+        for path in result[kind]:
+            ids = list(path_evidence_ids(path, headers))
+            if not ids:
+                continue
+            bound.append({**path, "source_evidence_ids": ids})
+            refs.update((eid, headers[eid]) for eid in ids)
+            groups.append({"id": f"{view}:{len(groups)}", "source_evidence_ids": ids,
+                           "complete": True, "required": False})
+        omitted = len(result[kind]) - len(bound)
+        if omitted:
+            result["unavailable_graph_paths"] = result.get("unavailable_graph_paths", 0) + omitted
+        result[kind] = bound
+    if result.get("unavailable_graph_paths"):
+        result["unresolved"].append("unverified_temporal_path")
+        result.update(status="INCOMPLETE_SEARCH", exhaustive=False)
+    result.update(view=view, passages=list(refs.values()), support_groups=groups)
     return result

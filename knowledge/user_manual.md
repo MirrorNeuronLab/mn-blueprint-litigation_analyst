@@ -4,6 +4,13 @@
 
 I organize approved matter documents into draft findings, timelines and competing explanations so counsel can inspect the evidence and decide what to investigate next.
 
+After planning, open **Review investigation questions** in Chat. Keep the
+number when you edit a suggested question. Delete a line to remove it, or add
+a question on a new line. Choose **Start investigation** when the list is ready.
+If evidence raises a new question during execution, Chat explains why the
+co-worker is pursuing it. Open **Full report → Questions** for the draft
+answers, cited passages and related follow-ups.
+
 Adaptive review follows conflicting accounts, missing support and independent
 review objections for up to three rounds. In Configure, choose **First pass**
 for a single round or choose a **Review objective** such as witness preparation.
@@ -29,9 +36,9 @@ Make sense of a large collection of case documents. Find important facts, timeli
    **Capture fact**. Enter wording, evidence role, reviewer and optional witness.
    Add a Bates or transcript reference after checking it against the original.
    Choose **Open passage** to verify the citation.
-3. Choose **Ask the graph** in Questions. Ask which records address receipt,
-   then which of those predate termination. Open the cutoff source and a
-   matching record. **Save question** retains the refinements.
+3. In the co-worker’s **Chat**, ask which records address receipt, then which
+   of those predate termination. Open the cited records in **Evidence** to
+   check the wording and the date used for the cutoff.
 4. In **People & events → Witness preparation**, choose the witness and element.
    Pair the witness's statement with another exhibit. Save counsel's neutral
    question and any explanation, then download the editable outline. Use
@@ -44,7 +51,7 @@ Make sense of a large collection of case documents. Find important facts, timeli
    → Export review decisions** and attach that file in Configure before the next
    run of the same matter. Under **Review history → Changes**, compare the older
    passage with candidates in the new record. Revisit the linked proof, witness
-   question and draft paragraph. Rerun saved questions under **Ask the graph**.
+   question and draft paragraph. Ask about the new production in **Chat**.
 7. Under **Reports → Reviewed briefing**, download the numbered Word statement
    and the separate counsel review sheet. Select a linked exhibit in Word to read
    the quoted passage and locator. Open `case/privilege_log.html` in the owner's
@@ -65,16 +72,22 @@ the review should help answer. The synthetic sample supplies its question.
 Optional counsel intake and previous decisions stay in Configure. Set handling restrictions
 before work; Chat cannot clear excluded material.
 
-Start with **Your next review** in the draft or offline overview. It explains one
-question, why it matters now, when to decide and the source passages to inspect.
+Open **Case summary** to see the outcome and read what the cited records say.
+**Your next review** identifies the question to resolve and the records to check.
+Use **Questions** for the supporting passages, competing accounts and proposed
+follow-up. **Evidence** keeps each document copy available for inspection.
 Chat shows a compact saved handoff. View full report opens the evidence workspace;
 Discuss next step fills a draft message without sending it. Record wording
 decisions through the existing finding review, then save or export to retain them.
 No discussion starts further work, grants approval or authorizes sharing.
 
-Use **Case graph** in the report to follow links between questions, findings,
-email addresses, documents, and transaction records. Select a connection to see
-its source passage. Chat can answer from the saved graph appendix when Membrane
+Open **Case graph** beside Overview. Start at the case goal and follow a question
+to its cited records. **Show hypotheses** reveals its competing explanations.
+Select a supporting or dashed contrary link to read its exact source passage.
+A document shows its cited copies and the sender, recipients or witnesses recorded
+in the source or by counsel. **Trace to case goal** shows how a selected item fits
+the review. Use **Browse graph as a list** to inspect the same items by keyboard.
+Chat can answer from the saved graph appendix when Membrane
 retrieves the relevant section. The audit archive includes a queryable graph
 database for direct lookup with the blueprint's `ask_case.py` tool.
 

@@ -91,11 +91,14 @@ def visible_financial(financial, evidence):
         'qualification': 'Source quotations/numbers verified; event classifications are counsel annotations. Ledger net is not bank settlement or damages.'}
 
 
-def packet_coverage(evidence, documents):
+def packet_coverage(evidence, documents, admission=None):
     spans = [asdict(e) if not isinstance(e, dict) else e for e in evidence]
     complete = [d.source_id for d in documents if d.text is not None and any(
         p['source_id'] == d.source_id and p['start_offset'] == 0 and p['end_offset'] == len(d.text) for p in spans)]
-    return {'admitted_evidence_ids': [e['evidence_id'] for e in spans],
+    limitations = {k: admission[k] for k in ('unresolved_groups', 'unavailable_graph_paths')
+                   if admission and admission.get(k)}
+    return {**({'unverified_support': limitations} if limitations else {}),
+        'admitted_evidence_ids': [e['evidence_id'] for e in spans],
         'admitted_source_ids': sorted({e['source_id'] for e in spans}),
         'complete_source_ids': complete,
         'definition': 'Exact sources admitted to this model request; not a completeness or accuracy certificate'}
